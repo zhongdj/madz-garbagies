@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Label xmlns:mx="http://www.adobe.com/2006/mxml" width="148" height="32" color="#0B333C" fontSize="12">
+<mx:Script>
+	<![CDATA[ 
+		import mx.formatters.DateFormatter;
+		
+		public var dateFieldName:String;
+		
+		override public function set data(value:Object):void  {
+			var formatter : DateFormatter = new DateFormatter();
+			formatter.formatString = "YY-MM-DD HH:NN";
+			
+			text = formatter.format(value[dateFieldName]);
+		}
+		
+		
+	]]>
+</mx:Script> 
+</mx:Label>

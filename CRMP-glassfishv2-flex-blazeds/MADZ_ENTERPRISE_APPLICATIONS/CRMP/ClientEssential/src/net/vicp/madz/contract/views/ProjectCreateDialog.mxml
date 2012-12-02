@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="624" height="322" title="创建工程" creationComplete="onCreateComplete(event);" fontSize="16">
+	<mx:Script>
+		<![CDATA[
+			import net.vicp.madz.biz.common.vo.CategoryQTO;
+			import mx.events.FlexEvent;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import mx.collections.ArrayCollection;
+			
+			public function reset():void{
+				nameInput.text = "";
+				createButton.enabled = false;
+				createAndCloseButton.enabled = false;
+			}
+			
+			private function onCreateComplete(event:FlexEvent):void{
+				commonObjectQuery.addEventListener(ResultEvent.RESULT,onFetch);
+				commonObjectQuery.addEventListener(FaultEvent.FAULT,onFault);
+				//commonObjectQuery.findUnitOfProject();
+				stage.focus = nameInput;
+				validate();
+			}
+			
+			private function onFetch(event:ResultEvent):void{
+			}
+			
+			private function onFault(event:FaultEvent):void{
+				
+			}
+			
+			private function validate() : void {
+				if (null != nameInput.text && 0 < nameInput.text.length) {
+					createButton.enabled = true;
+					createAndCloseButton.enabled = true;
+				} else {
+					createButton.enabled = false;
+					createAndCloseButton.enabled = false;
+				}
+			}
+			
+		]]>
+	</mx:Script>
+	
+	<mx:Label x="35" y="89" text="名称：" width="76" fontWeight="bold" textAlign="right" height="25"/>
+	<mx:TextInput x="115" y="89" width="179" id="nameInput" tabIndex="2" height="25" change="validate()"/>
+	<mx:Label x="317" y="56" text="收票联系人：" width="97" fontWeight="bold" textAlign="right" height="25"/>
+	
+	<mx:Button id="createButton" x="187" y="216" width="66" label="创建" fontSize="14" tabIndex="7"/>
+	<mx:Button id="closeBtn" x="402" y="214" width="66" label="取消" fontSize="14" tabIndex="8"/>
+	
+	<mx:RemoteObject id="commonObjectQuery" destination="CommonObjectQuery"/>
+	<mx:Button id="createAndCloseButton" x="265" y="214" width="119" label="创建并关闭" fontSize="14"
+			   tabIndex="7"/>
+	<mx:DateField id="startDateField" x="115" y="120" width="179"/>
+	<mx:DateField id="endDateField" x="115" y="155" width="179"/>
+	<mx:Label x="20" y="155" text="截止日期：" width="91" fontWeight="bold" textAlign="right" height="25"/>
+	<mx:Label x="20" y="120" text="起始日期：" width="91" fontWeight="bold" textAlign="right" height="25"/>
+	<mx:ComboBox id="billToContactComboBox" x="422" y="56" editable="true"></mx:ComboBox>
+	<mx:Label x="13" y="56" text="账户：" width="97" fontWeight="bold" textAlign="right" height="25"/>
+	<mx:ComboBox id="ownerComboBox" x="115" y="56" width="179" editable="true"></mx:ComboBox>
+	<mx:Label x="317" y="92" text="收货联系人：" width="97" fontWeight="bold" textAlign="right" height="25"/>
+	<mx:ComboBox id="shipToContactComboBox" x="422" y="92" editable="true"></mx:ComboBox>
+	<mx:Label x="317" y="126" text="买方联系人：" width="97" fontWeight="bold" textAlign="right" height="25"/>
+	<mx:ComboBox id="soldToContactComboBox" x="422" y="126" editable="true"></mx:ComboBox>
+	<mx:Label x="317" y="159" text="付款联系人：" width="97" fontWeight="bold" textAlign="right" height="25"/>
+	<mx:ComboBox id="payerComboBox" x="422" y="159" editable="true"></mx:ComboBox>
+	
+</mx:Panel>

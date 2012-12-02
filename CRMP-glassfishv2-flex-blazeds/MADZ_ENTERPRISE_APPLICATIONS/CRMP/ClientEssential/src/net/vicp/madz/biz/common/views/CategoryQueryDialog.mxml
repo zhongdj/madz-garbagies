@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml"
+		  width="366" height="192" fontSize="12" layout="absolute" title="种类查询">
+		<mx:Script>
+			<![CDATA[
+				public function reset():void{
+					categoryNameInput.text = "";
+				}
+			]]>
+		</mx:Script>
+		<mx:Label text="种类名称:" x="23" y="46" width="122" textAlign="right" fontWeight="bold"/>
+		<mx:TextInput x="153" y="44" id="categoryNameInput"/>
+		<mx:Button x="50" y="108" label="查询" width="95" id="queryButton"/>
+		<mx:Button x="220" y="108" label="关闭" width="93" id="closeBtn"/>
+	
+</mx:Panel>

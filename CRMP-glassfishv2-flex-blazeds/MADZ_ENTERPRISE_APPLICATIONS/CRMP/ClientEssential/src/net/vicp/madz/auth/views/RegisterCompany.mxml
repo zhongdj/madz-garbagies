@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="90%" height="438" title="Register" styleName="glassPods">
+<mx:Script>
+	<![CDATA[
+		public function get userName():String{
+			return userNameInput.text;
+		}
+		
+		public function get password():String{
+			return passwordInput.text;
+		}
+		
+		public function get companyName():String{
+			return companyNameInput.text;
+		}
+		
+		public function get ownerName():String{
+			return ownerNameInput.text;
+		}
+		
+		public function get address():String{
+			return addressInput.text;
+		}
+		
+		public function reset():void{
+			userNameInput.text = "";
+			passwordInput.text = "";
+			confirmPasswordInput.text = "";
+			companyNameInput.text = "";
+			ownerNameInput.text = "";
+			addressInput.text = "";
+		}
+		
+		private function validate():void{
+			trace("validate");
+			if(password == null
+			||password == ""
+			||confirmPasswordInput.text==null
+			||confirmPasswordInput.text==""||
+			password != confirmPasswordInput.text){
+				submitButton.enabled = false;
+			}else{
+				submitButton.enabled = true;
+			}
+		}
+	]]>
+</mx:Script>
+	<mx:Label x="38" y="167" text="Company Part:" fontWeight="bold"/>
+	<mx:Label x="38" y="29" text="Admin Part:" fontWeight="bold"/>
+	<mx:Label x="74" y="85" text="Password:" width="92" fontWeight="bold"/>
+	<mx:Label x="74" y="111" text="Confirm Pass:" width="92" fontWeight="bold"/>
+	<mx:Label x="74" y="59" text="User Name:" width="92" fontWeight="bold"/>
+	<mx:Label x="74" y="202" text="Company Name:" width="114" fontWeight="bold"/>
+	<mx:Label x="74" y="272" text="Address:" width="114" fontWeight="bold"/>
+	<mx:TextInput x="187" y="57"  id="userNameInput"/>
+	<mx:TextInput x="187" y="83"  id="passwordInput"  change="validate();" displayAsPassword="true"/>
+	<mx:TextInput x="187" y="109"  id="confirmPasswordInput" change="validate();" displayAsPassword="true"/>
+	<mx:TextInput x="187" y="200"  id="companyNameInput" fontSize="12"/>
+	<mx:TextInput x="187" y="235"  id="ownerNameInput"/>
+	<mx:Label x="74" y="237" text="Owner Name:" width="114" fontWeight="bold"/>
+	<mx:TextArea x="187" y="271"  id="addressInput"/>
+	<mx:Button x="348" y="349" label="Submit" fontWeight="bold" id="submitButton"/>
+	<mx:Button x="432" y="349" label="Close" width="69" fontWeight="bold" id="closeBtn"/>
+	<mx:Label x="366" y="57" text="* length between 6-40 " fontWeight="bold"/>
+	<mx:Label x="366" y="202" text="* length between 6-40 " fontWeight="bold"/>
+	<mx:Label x="366" y="85" text="* length between 6-16" fontWeight="bold"/>
+	<mx:Label x="366" y="111" text="* retype password" fontWeight="bold"/>
+</mx:Panel>

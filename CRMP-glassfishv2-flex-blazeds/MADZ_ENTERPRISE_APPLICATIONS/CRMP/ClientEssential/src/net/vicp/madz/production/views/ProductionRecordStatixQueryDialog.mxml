@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml"
+		  xmlns:components="net.vicp.madz.components.*"
+		  width="422" height="284" creationComplete="onCreateComplete(event);" fontSize="12"
+		  layout="absolute" title="设定产量统计条件">
+	
+	
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.ArrayCollection;
+			import mx.collections.ArrayList;
+			import mx.events.FlexEvent;
+			import mx.events.ListEvent;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			import net.vicp.madz.production.vo.*;
+			
+			[Bindable]
+			private var unitOfProjects : Array;
+			
+			private function onCreateComplete(event:FlexEvent):void{
+				contractQueryServer.addEventListener(ResultEvent.RESULT,onUnitOfProjectFetch);
+				contractQueryServer.findUnitOfProjects();
+				accountRunTypeGroup.selection = allUnitOfProject;
+				validate();
+				
+			}
+			
+			private function onUnitOfProjectFetch(event:ResultEvent) : void {
+				unitOfProjects = ArrayCollection(event.result).toArray();
+				if (null != unitOfProjectComboBox) {
+					unitOfProjectComboBox.dataProvider = unitOfProjects;
+				}
+			}
+			
+			private function validate() : void {
+				if (accountRunTypeGroup.selection == allUnitOfProject) {
+					unitOfProjectComboBox.enabled = false;
+				} else {
+					unitOfProjectComboBox.enabled = true;
+				}
+			}
+			
+			protected function onAccountRunTypeChange(event:Event):void
+			{
+				validate();
+			}
+			
+			public function reset():void{
+				
+			}
+			
+			private function onFetch(event:ResultEvent) : void {
+			}
+			
+		]]>
+	</mx:Script>
+
+	<mx:Label id="productionStartTimeLabel" x="42" y="115" width="89" fontWeight="bold" text="起始时间:" textAlign="right"/>
+	
+	<mx:Button id="queryButton" x="151" y="206" width="95" label="执行统计"/>
+	<mx:Button id="closeButton" x="264" y="206" width="93" label="关闭"/>
+	
+	<mx:Label id="productionEndTimeLabel" x="42" y="150" width="89" fontWeight="bold" text="截止时间:" textAlign="right"/>
+	<mx:ComboBox id="unitOfProjectComboBox" x="158" y="74" width="200" editable="true" labelField ="name"></mx:ComboBox>
+	
+	<mx:RadioButtonGroup id="accountRunTypeGroup" change="onAccountRunTypeChange(event)" />
+	<mx:RadioButton id="allUnitOfProject" x="43" y="41" label="全部单位工程" groupName="accountRunTypeGroup"/>
+	<mx:RadioButton id="specifiedUnitOfProject" x="43" y="77" label="指定单位工程" groupName="accountRunTypeGroup"/>
+	<mx:TextInput id="startTimeInput" x="158" y="111" width="200" toolTip="格式:12/31/2012 00:00:00"/>
+	<mx:TextInput id="endTimeInput" x="158" y="146" width="200" toolTip="格式:12/31/2012 00:00:00"/>
+
+	<mx:RemoteObject id="contractQueryServer" destination="Contract"/>
+
+
+</mx:Panel>

@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Box xmlns:mx="http://www.adobe.com/2006/mxml" width="100%" height="100%">
+	
+ <mx:Tree id="myTreeNav" height="100%" width="100%" labelField="@label" styleName="fseTree" disclosureClosedIcon="{arrowSide}"
+ 	disclosureOpenIcon="{arrowDown}" showRoot="true" dataProvider="{treeNavData}" change="treeChanged(event)" iconField="@icon"  />	
+	
+
+
+	
+<mx:Script>
+	<![CDATA[
+		import mx.collections.XMLListCollection;
+		
+		import mx.events.FlexEvent;
+		
+		[Bindable]
+		public var currentView:Number = 0;
+		
+		[Bindable]
+		public var treeNavData:XMLList;
+		
+		
+		[Bindable]
+        public var selectedNode:XML;
+       
+		 
+		public function treeChanged(event:Event):void {
+                selectedNode=Tree(event.target).selectedItem as XML;
+                currentView = selectedNode.@data;
+                if (currentView != -1) {
+                	 this.dispatchEvent(new Event("change"));
+                } 
+        }
+      
+        
+        [Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/application.png")]
+		public var application:Class;
+        
+        [Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/Accordion.png")]
+		public var accordion:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/ApplicationControlBar.png")]
+		public var applicationControlBar:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/Button.png")]
+		public var button:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/CheckBox.png")]
+		public var checkBox:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/ComboBox.png")]
+		public var comboBox:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/DataGrid.png")]
+		public var dataGrid:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/DateChooser.png")]
+		public var dateChooser:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/HRule.png")]
+		public var hRule:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/HScrollBar.png")]
+		public var hScrollBar:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/HSlider.png")]
+		public var hSlider:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/LinkBar.png")]
+		public var linkBar:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/List.png")]
+		public var list:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/MenuBar.png")]
+		public var menuBar:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/NumericStepper.png")]
+		public var numericStepper:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/Panel.png")]
+		public var panel:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/TabNavigator.png")]
+		public var tabNavigator:Class;
+
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/TextArea.png")]
+		public var textArea:Class;
+	
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/TextInput.png")]
+		public var textInput:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/Tree.png")]
+		public var tree:Class;
+
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/VRule.png")]
+		public var vRule:Class;
+	
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/VScrollBar.png")]
+		public var vScrollBar:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/VSlider.png")]
+		public var vSlider:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/RadioButton.png")]
+		public var radioButton:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/ProgressBar.png")]
+		public var progressBar:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/ToolTip.png")]
+		public var toolTipIcon:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/ToggleButtonBar.png")]
+		public var toggleButtonBar:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/ButtonBar.png")]
+		public var buttonBar:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/LinkButton.png")]
+		public var linkButton:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/disclose_close.png")]
+		public var arrowSide:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/disclose_open.png")]
+		public var arrowDown:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/HDividedBox.png")]
+		public var hDividedBox:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/VDividedBox.png")]
+		public var vDividedBox:Class;
+		
+		[Bindable]
+		[Embed(source="/net/vicp/madz/assets/TreeIcons/ColorPicker.png")]
+		public var colorPicker:Class;
+		
+		
+		
+	]]>
+</mx:Script>	
+
+<mx:Metadata>
+        [Event("change")]
+    </mx:Metadata>
+
+</mx:Box>

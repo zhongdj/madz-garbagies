@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="406" height="444" title="新增商品" creationComplete="onCreateComplete(event);" fontSize="14">
+<mx:Script>
+	<![CDATA[
+		import mx.collections.ArrayCollection;
+		import mx.events.FlexEvent;
+		import mx.rpc.events.FaultEvent;
+		import mx.rpc.events.ResultEvent;
+		
+		import net.vicp.madz.biz.common.vo.CategoryQTO;
+		
+		public function reset():void{
+			codeInput.text = "";
+			nameInput.text = "";
+			suggestPriceInput.text = "";
+			descriptionTextArea.text = "";	
+			uomCombox.selectedIndex = -1;
+//			createButton.enabled = false;
+//			commonObjectQuery.findCategory();
+		}
+		
+		private function onCreateComplete(event:FlexEvent):void{
+		  uomObjectQuery.addEventListener(ResultEvent.RESULT, onUomFetch);
+		  uomObjectQuery.addEventListener(FaultEvent.FAULT, onUomFault);
+		  
+		  uomObjectQuery.findUnitOfMeasure(false);
+          stage.focus = codeInput;
+		}
+		
+		
+		private function onUomFetch(event:ResultEvent) : void {
+			var uomList:Array = ArrayCollection(event.result).toArray();
+			uomCombox.labelField = "name";
+			uomCombox.dataProvider = uomList;
+			uomCombox.selectedIndex = -1;
+			if(uomCombox.selectedIndex == -1){
+//				createButton.enabled = true;
+			}
+		}
+		
+		private function onUomFault(event:FaultEvent):void{
+			
+		}
+		
+				
+		private function onChange():void{
+//			if(categoryCombox.selectedIndex == -1){
+//				createButton.enabled = false;
+//			}else{
+//				createButton.enabled = true;
+//			}
+		}
+	]]>
+</mx:Script>
+	<mx:Label y="7" text="商品编码：" width="112" fontWeight="bold" textAlign="center" left="24"/>
+	<mx:TextInput x="144" y="10" width="200" id="codeInput" tabIndex="1" focusEnabled="true"/>
+	
+	<mx:Label x="24" y="34" text="商品名称：" width="112" fontWeight="bold" textAlign="center"/>
+	<mx:TextInput x="144" y="37" width="200" id="nameInput" tabIndex="2"/>
+	
+	<mx:Label x="24" y="64" text="建议价格：" width="112" textAlign="center" fontWeight="bold"/>
+	<mx:TextInput x="144" y="67" width="200" id="suggestPriceInput" tabIndex="3"/>
+			
+	<mx:Label x="24" y="210" text="具体描述：" width="112" textAlign="center" fontWeight="bold"/>
+	<mx:TextArea x="144" y="201" width="200" height="88" id="descriptionTextArea" wordWrap="true" editable="true" enabled="true" tabIndex="4" tabEnabled="true"/>
+	
+	<mx:Label x="24" y="124" text="商品分类：" width="112" fontWeight="bold" textAlign="center"/>
+	<mx:Label x="24" y="92" text="计量单位：" width="112" fontWeight="bold" textAlign="center"/>
+	<mx:ComboBox x="144" y="95" id="uomCombox"  editable="true" enabled="true" width="200" change="onChange()" prompt="请选择计量单位…" tabIndex="5" tabEnabled="true"/>
+
+	<mx:CheckBox x="144" y="299" label="创建后关闭此对话框" width="200" selected="true" id="closeCheckBox" tabIndex="6" tabEnabled="true"/>
+	
+	<mx:Button x="43" y="342" label="确定" id="createButton" width="66" tabIndex="7"/>
+	<mx:Button x="244" y="342" label="取消" id="closeBtn" width="66" tabIndex="8"/>
+	
+	<mx:RemoteObject id="commonObjectQuery" destination="CommonObjectQuery"/>
+	<mx:RemoteObject id="uomObjectQuery" destination="CommonObjectQuery"/>
+	<mx:RadioButtonGroup id="categoryGroup"/>
+	<mx:VBox x="144" y="128">
+		<mx:RadioButton label="强度等级" groupName="categoryGroup"/>
+		<mx:RadioButton label="外加剂" groupName="categoryGroup"/>
+	</mx:VBox>
+	
+</mx:Panel>

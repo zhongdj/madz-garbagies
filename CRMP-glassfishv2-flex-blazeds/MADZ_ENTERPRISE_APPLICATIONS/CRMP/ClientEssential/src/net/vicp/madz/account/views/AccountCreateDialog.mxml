@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml"
+		  width="416" height="248" creationComplete="onCreateComplete(event);" fontSize="12"
+		  layout="absolute" title="创建客户">
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.ArrayCollection;
+			import mx.collections.ArrayList;
+			import mx.events.FlexEvent;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			public function reset():void{
+				if (null != nameInput) {
+    				nameInput.text = "";
+				}
+				if (null != shortNameInput) {
+					shortNameInput.text = "";
+				}
+			}
+			
+			public function onCreateComplete(event:FlexEvent):void {
+//				server.addEventListener(ResultEvent.RESULT,onFetch);
+//				server.findAccounts();
+			}
+			
+//			private function onFetch(event:ResultEvent) : void {
+//				if (null != event.result) {
+//					accountBox.dataProvider = event.result;
+//					accountBox.labelField = "name";
+//				}
+//			}
+		]]>
+	</mx:Script>
+	<mx:Label id="nameLabel" x="18" y="46" width="122" fontWeight="bold" text="客户名称:" textAlign="right"/>
+	<mx:TextInput id="nameInput" x="148" y="44" width="211"/>
+	<mx:Button id="createButton" x="60" y="125" width="95" label="创建"/>
+	<mx:Button id="createAndCloseButton" x="163" y="125" width="95" label="创建并关闭"/>
+	<mx:Button id="closeButton" x="266" y="125" width="93" label="关闭"/>
+	<mx:Label x="18" y="84" width="122" fontWeight="bold" text="简称:" textAlign="right"/>
+	<mx:TextInput id="shortNameInput" x="148" y="82" width="211"/>
+	<mx:RemoteObject id="server" destination="Account"/>
+</mx:Panel>

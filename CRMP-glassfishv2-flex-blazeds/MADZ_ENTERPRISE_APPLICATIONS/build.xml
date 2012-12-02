@@ -1,0 +1,21 @@
+<project name="PLATFORM_MODULES" default="jar">
+	<property file="./Build/build.properties" />
+
+	<target name="delete-dist">
+		<ant dir="${crmp.home}" target="delete-dist" />
+	</target>
+
+
+	<target name="clean">
+		<ant dir="${crmp.home}" target="clean" />
+	</target>
+	
+	<target name="jar">
+		<ant dir="${crmp.home}" target="jar" />
+	</target>
+
+	<target name="report">
+		<ant dir="${crmp.home}" target="report" />
+	</target>
+</project>
+

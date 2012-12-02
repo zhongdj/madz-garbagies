@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml"
+		  width="756" height="318" creationComplete="onCreateComplete(event);" fontSize="12"
+		  layout="absolute" title="更改联系人">
+
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.ArrayCollection;
+			import mx.collections.ArrayList;
+			import mx.events.FlexEvent;
+			import mx.events.ListEvent;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			import net.vicp.madz.account.vo.*;
+			
+			private var contact :ContactTO;
+			
+			public function setContact(item:ContactTO) : void {
+			    if (null == item) {
+					return;
+				}
+				
+				this.contact = item;
+				
+				idInput.text = item.id;
+				nameInput.text = item.name;
+				emailInput.text = item.email;
+				mobileInput.text = item.mobile;
+				telephoneInput.text = item.telephone;
+				faxInput.text = item.fax;
+				if (item.sex) {
+				    sexBox.selectedIndex = 0;
+				} else {
+					sexBox.selectedIndex = 1;
+				}
+				
+				if (contact.contactType == "ShipTo") {
+				    contactTypeBox.selectedIndex = 0;
+				} else if (contact.contactType == "BillTo") {
+					contactTypeBox.selectedIndex == 1;
+				} else if (contact.contactType == "Payer") {
+					contactTypeBox.selectedIndex = 2;
+				} else if (contact.contactType == "SoldTo") {
+					contactTypeBox.selectedIndex = 3;
+				}
+			}
+			
+			public function reset():void{
+				if (null != nameInput) {
+					nameInput.text = "";
+				}
+				if (null != emailInput) {
+					emailInput.text = "";
+				}
+				if (null != mobileInput) {
+					mobileInput.text = "";
+				}
+				if (null != telephoneInput) {
+					telephoneInput.text = "";
+				}
+				if (null != faxInput) {
+					faxInput.text = "";
+				}
+				if (null != sexBox) {
+					sexBox.selectedIndex = -1;
+				}
+				if (null != contactTypeBox) {
+					contactTypeBox.selectedIndex = -1;
+				}
+				contact = null;
+			}
+			
+			public function onCreateComplete(event:FlexEvent):void {
+				server.addEventListener(ResultEvent.RESULT,onFetch);
+				server.findAccounts();
+				accountBox.addEventListener(ListEvent.CHANGE, onParentChange);
+				
+				var sexList : ArrayList = new ArrayList();
+				sexList.addItem("男");
+				sexList.addItem("女");
+				sexBox.dataProvider = sexList;
+				
+				var typeList : ArrayList = new ArrayList();
+				typeList.addItem("收货联系人");
+				typeList.addItem("收票联系人");
+				typeList.addItem("付款联系人");
+				typeList.addItem("售达联系人");
+				contactTypeBox.dataProvider = typeList;
+			}
+			
+			private function onFetch(event:ResultEvent) : void {
+				if (null != event.result) {
+					accountBox.dataProvider = event.result;
+					accountBox.labelField = "name";
+				}
+			}
+			
+			private function onParentChange(event:ListEvent) : void {
+				this.contact.accountId = ((event.target as ComboBox).selectedItem as AccountTO).id;
+				this.contact.accountName = ((event.target as ComboBox).selectedItem as AccountTO).name;
+			}
+		]]>
+	</mx:Script>
+	<mx:Label id="idLabel" x="18" y="12" width="122" fontWeight="bold" text="标识:" textAlign="right"/>
+	<mx:TextInput id="idInput" x="148" y="10" width="211" editable="false"/>
+
+	<mx:Label id="nameLabel" x="18" y="46" width="122" fontWeight="bold" text="姓名:" textAlign="right"/>
+	<mx:TextInput id="nameInput" x="148" y="44" width="211"/>
+
+	<mx:Label id="mobileLabel" x="367" y="46" width="97" fontWeight="bold" text="移动电话:"
+			  textAlign="right"/>
+	<mx:TextInput id="mobileInput" x="472" y="44" width="211"/>
+	
+	<mx:Label x="18" y="84" width="122" fontWeight="bold" text="电邮:" textAlign="right"/>
+	<mx:TextInput id="emailInput" x="148" y="82" width="211"/>
+	
+	<mx:Label x="366" y="81" width="98" fontWeight="bold" text="固定电话:" textAlign="right"/>
+	<mx:TextInput id="telephoneInput" x="472" y="79" width="211"/>
+	
+	<mx:Label x="366" y="117" width="98" fontWeight="bold" text="传真:" textAlign="right"/>
+	<mx:Label x="366" y="154" width="98" fontWeight="bold" text="账户:" textAlign="right"/>
+	<mx:TextInput id="faxInput" x="472" y="115" width="211"/>
+	
+	<mx:Label x="18" y="117" width="122" fontWeight="bold" text="性别:" textAlign="right"/>
+	<mx:Label x="18" y="154" width="122" fontWeight="bold" text="联系人类型:" textAlign="right"/>
+	
+	<mx:ComboBox id="contactTypeBox" x="148" y="154" width="211" editable="true"></mx:ComboBox>
+	<mx:ComboBox id="sexBox" x="148" y="118" width="210" editable="true"></mx:ComboBox>
+	
+	<mx:ComboBox id="accountBox" x="472" y="154" width="219" editable="true"></mx:ComboBox>
+	
+	<mx:Button id="updateButton" x="388" y="214" width="95" label="更新"/>
+	<mx:Button id="updateAndCloseButton" x="491" y="214" width="95" label="更新并关闭"/>
+	<mx:Button id="closeButton" x="594" y="214" width="93" label="关闭"/>
+	<mx:RemoteObject id="server" destination="Account"/>
+</mx:Panel>

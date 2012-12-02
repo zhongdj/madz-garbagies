@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml"  
+		  xmlns:components="net.vicp.madz.components.*"
+		  layout="absolute" 
+		  width="690" 
+		  height="372" 
+		  title="查看记账任务" 
+		  creationComplete="onCreateComplete(event);" 
+		  fontSize="12">
+	
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.ArrayCollection;
+			import mx.controls.dataGridClasses.DataGridColumn;
+			import mx.core.IFlexDisplayObject;
+			import mx.events.FlexEvent;
+			import mx.events.ListEvent;
+			import mx.managers.PopUpManager;
+			import mx.rpc.AsyncToken;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			import net.vicp.madz.components.events.ActionTableEvent;
+			import net.vicp.madz.components.renderer.DateRendererFactory;
+			import net.vicp.madz.contract.vo.UnitOfProjectTO;
+			import net.vicp.madz.invoice.vo.AccountRunTaskTO;
+			
+			
+			private static const INVALID:int = -1;
+			private static const QUERY:int = 0;
+			private static const CREATE:int = 1;
+			private static const UPDATE:int = 2;
+			private static const DELETE:int = 3;
+			
+			private var resultToken:AsyncToken;
+			private var lastRPCType:int;
+			
+			[Bindable]
+			private var unitOfProjects : Array;
+			private var accountRun :AccountRunTaskTO;
+			
+			public function reset():void{
+			}
+			
+			private function onCreateComplete(event:FlexEvent):void{
+				contractQueryServer.addEventListener(ResultEvent.RESULT,onUnitOfProjectFetch);
+				contractQueryServer.findUnitOfProjects();
+				validate();
+				
+			}
+			
+			private function onUnitOfProjectFetch(event:ResultEvent) : void {
+				unitOfProjects = ArrayCollection(event.result).toArray();
+			}
+			
+			private function validate() : void {
+			}
+			
+			
+			public function setData(value:Object):void
+			{
+				accountRun = value as AccountRunTaskTO;	
+			}
+			
+		]]>
+	</mx:Script>
+	<mx:Button id="closeBtn" x="347" y="9" width="66" label="关闭" fontSize="12" tabIndex="8"/>
+	<mx:Button id="refreshButton" x="273" y="9" width="66" label="刷新" fontSize="12" tabIndex="8"/>
+	<mx:ComboBox id="unitOfProjectComboBox" x="167" y="91" width="200" editable="true" labelField ="name"></mx:ComboBox>
+	<mx:DateField id="dueDateField" x="519" y="58" width="129"/>
+	<mx:DateField id="postDateField" x="519" y="91" width="128"/>
+	<mx:DateField id="payOffDateField" x="519" y="122" width="128"/>
+	<mx:Label x="382" y="125" width="119" height="25" fontSize="12" fontWeight="bold" text="任务执行日期："
+			  textAlign="right"/>
+	<mx:Label x="382" y="91" width="119" height="25" fontSize="12" fontWeight="bold" text="截止生产日期："
+			  textAlign="right"/>
+	<mx:Label x="381" y="58" width="119" height="25" fontSize="12" fontWeight="bold" text="起始生产日期："
+			  textAlign="right"/>
+	<mx:RadioButtonGroup id="accountRunTypeGroup" />
+	<mx:VBox x="55" y="41">
+	</mx:VBox>
+	<mx:RadioButton id="allUnitOfProject" x="52" y="58" label="全部单位工程" groupName="accountRunTypeGroup"/>
+	<mx:RadioButton id="specifiedUnitOfProject" x="52" y="94" label="指定单位工程" groupName="accountRunTypeGroup"/>
+	<mx:RemoteObject id="contractQueryServer" destination="Contract"/>
+	<mx:Label x="121" y="178" fontSize="12" fontWeight="bold" text="状态："/>
+	<mx:Label x="82" y="213" fontSize="12" fontWeight="bold" text="已扫描产量："/>
+	<mx:Label x="30" y="251" fontSize="12" fontWeight="bold" text="已扫描生产数据数量："/>
+	<mx:Label x="391" y="213" fontSize="12" fontWeight="bold" text="已扫描单位工程："/>
+	<mx:Label x="405" y="251" fontSize="12" fontWeight="bold" text="生成往来账款："/>
+	<mx:Label x="405" y="178" fontSize="12" fontWeight="bold" text="已生成往来帐："/>
+	<mx:Label id="stateLabel" x="167" y="175" width="124"/>
+	<mx:Label id="scanedProductivityLabel" x="167" y="210" width="124"/>
+	<mx:Label id="scannedProductionRecordsLabel" x="167" y="246" width="124"/>
+	<mx:Label id="generatedAmountLabel" x="509" y="246" width="124"/>
+	<mx:Label id="scannedUnitOfProjects" x="509" y="208" width="124"/>
+	<mx:Label id="generatedInvoiceLabel" x="509" y="174" width="124"/>
+</mx:Panel>

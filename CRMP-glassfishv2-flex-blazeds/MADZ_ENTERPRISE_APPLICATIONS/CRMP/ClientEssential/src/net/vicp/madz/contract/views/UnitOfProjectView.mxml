@@ -1,0 +1,360 @@
+<?xml version="1.0" encoding="utf-8"?>
+<framework:ManagedView xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:components="net.vicp.madz.components.*"
+					   xmlns:framework="net.vicp.madz.framework.views.*" layout="vertical" width="100%" height="100%"  creationComplete="init();">
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.*;
+			import mx.controls.Alert;
+			import mx.controls.dataGridClasses.DataGridColumn;
+			import mx.core.IFlexDisplayObject;
+			import mx.events.FlexEvent;
+			import mx.events.ListEvent;
+			import mx.managers.PopUpManager;
+			import mx.rpc.AsyncToken;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			import net.vicp.madz.components.events.ActionTableEvent;
+			import net.vicp.madz.components.renderer.DateRendererFactory;
+			import net.vicp.madz.contract.vo.UnitOfProjectTO;
+			import net.vicp.madz.account.vo.ContactTO;
+			
+			//////////////////////////////////////////////////////
+			////
+			//// Fields 
+			////
+			//////////////////////////////////////////////////////
+			private static const INVALID:int = -1;
+			private static const QUERY:int = 0;
+			private static const CREATE:int = 1;
+			private static const UPDATE:int = 2;
+			private static const DELETE:int = 3;
+			
+			private var createForm:UnitOfProjectCreateDialog;
+			private var updateForm:UnitOfProjectModifyDialog;
+			
+			[Bindable]
+			public var dataList:Array;
+			[Bindable]
+			private var columnProvider:Array;
+			private var resultToken:AsyncToken;
+			private var lastRPCType:int;
+			//////////////////////////////////////////////////////
+			////
+			//// Methods 
+			//// 
+			//////////////////////////////////////////////////////
+			
+			//////////////////////////////////////////////////////
+			//// Methods : initialize 
+			//////////////////////////////////////////////////////
+			private function init():void{
+				initDataTable();
+				initListeners();
+			}
+			
+			private function initDataTable():void {
+				columnProvider = new Array();
+				
+				var col:DataGridColumn = new DataGridColumn("name");
+				col.headerText="名称";
+				col.width = 240;
+				col.dataField="name";
+				columnProvider.push(col);       
+				
+				col = new DataGridColumn("startDate");
+				col.headerText="开工日期";
+				col.dataField="startDate";
+				col.editable = false;
+				col.itemRenderer = new DateRendererFactory("startDate");
+				columnProvider.push(col);     
+				
+				col = new DataGridColumn("endDate");
+				col.headerText="收工日期";
+				col.dataField="endDate";
+				col.editable = false;
+				col.itemRenderer = new DateRendererFactory("endDate");
+				columnProvider.push(col);     
+				
+				col = new DataGridColumn("billToContactName");
+				col.headerText="收票联系人";
+				col.dataField="billToContact.Name";
+				col.editable = false;
+				columnProvider.push(col); 
+				
+				col = new DataGridColumn("soldToContactName");
+				col.headerText="售达联系人";
+				col.dataField="soldToContact.Name";
+				col.editable = false;
+				columnProvider.push(col); 
+				
+				col = new DataGridColumn("shipToContactName");
+				col.headerText="收货联系人";
+				col.dataField="shipToContact.Name";
+				col.editable = false;
+				columnProvider.push(col); 
+				
+				col = new DataGridColumn("payerContactName");
+				col.headerText="付款联系人";
+				col.dataField="payerContact.Name";
+				col.editable = false;
+				columnProvider.push(col); 
+				
+				
+				col = new DataGridColumn("updatedBy");
+				col.headerText="更新者";
+				col.dataField="updatedBy";
+				col.editable = false;
+				columnProvider.push(col); 
+				
+				col = new DataGridColumn("updatedOn");
+				col.headerText="更新日期";
+				col.dataField="updatedOn";
+				col.editable = false;
+				col.itemRenderer = new DateRendererFactory("updatedOn");
+				columnProvider.push(col);             	
+				
+				col = new DataGridColumn("createdBy");
+				col.headerText="创建者";
+				col.dataField="createdBy";
+				col.editable = false;
+				columnProvider.push(col);             	
+				
+				col = new DataGridColumn("createdOn");
+				col.headerText="创建日期";
+				col.dataField="createdOn";
+				col.editable = false;
+				col.itemRenderer = new DateRendererFactory("createdOn");
+				columnProvider.push(col);       
+				
+				dataTable.columnProvider = columnProvider;
+			}
+			
+			
+			private function initListeners():void {
+				dataTable.addEventListener(ListEvent.ITEM_CLICK,onItemSelected);
+				//For Query
+				dataTable.addEventListener(ActionTableEvent.REQUEST_DATA_QUERY,executeQuery);
+				dataTable.addEventListener(ActionTableEvent.SUBMIT_QUERY_CONDITION,executeQuery);
+				//For Modify
+				dataTable.addEventListener(ActionTableEvent.REQUEST_DATA_MODIFY,popupModifyView);
+				dataTable.addEventListener(ActionTableEvent.DATA_MODIFY_SUBMIT,executeUpdate);
+				//For Create
+				dataTable.addEventListener(ActionTableEvent.DATA_CREATE,popupCreateView);
+				//For Delete
+				dataTable.addEventListener(ActionTableEvent.DATA_DELETE,executeDelete);
+				
+				//For Create, Modify, Delete
+				server.addEventListener(FaultEvent.FAULT,onFault);
+				server.addEventListener(ResultEvent.RESULT,onSuccess);
+				
+				//For Query
+				queryServer.addEventListener(ResultEvent.RESULT,onDataFetch);
+				queryServer.addEventListener(FaultEvent.FAULT,onDataFetchFault);
+				
+			}
+			
+			//////////////////////////////////////////////////////
+			////
+			//// Event Handlers
+			//// 
+			//////////////////////////////////////////////////////			
+			private function onItemSelected(event:ListEvent):void{
+				trace("Item Selected");
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Query Handlers
+			//////////////////////////////////////////////////////		
+			private function executeQuery(event:ActionTableEvent):void{
+				queryServer.findUnitOfProjects();
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Create Handlers
+			//////////////////////////////////////////////////////	
+			private function popupCreateView(event:ActionTableEvent):void{
+				if(createForm == null){
+					createForm = new UnitOfProjectCreateDialog();
+				}else{
+					createForm.reset();
+				}
+				PopUpManager.addPopUp(createForm as IFlexDisplayObject, this as DisplayObject, true);
+				PopUpManager.centerPopUp(createForm);
+				createForm.createButton.addEventListener(FlexEvent.BUTTON_DOWN,onCreate);
+				createForm.createAndCloseButton.addEventListener(FlexEvent.BUTTON_DOWN,onCreateAndClose);
+				createForm.closeBtn.addEventListener(FlexEvent.BUTTON_DOWN,onCreateClose);
+			}
+			
+			private function onCreate(event:FlexEvent):void{
+				createUnitOfProject();
+			}
+			private function onCreateAndClose(event:FlexEvent):void{
+				createUnitOfProject();
+				PopUpManager.removePopUp(createForm);
+			}
+			
+			private function onCreateClose(event:FlexEvent):void{
+				PopUpManager.removePopUp(createForm);
+			}
+			
+			private function createUnitOfProject() : void {
+				var newTO:UnitOfProjectTO = new UnitOfProjectTO();
+				newTO.name = this.createForm.nameInput.text;
+				//TODO
+				this.resultToken = server.createUnitOfProject(newTO);
+				this.lastRPCType = CREATE;
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Delete Handlers
+			//////////////////////////////////////////////////////	
+			private function executeDelete(event:ActionTableEvent):void{
+				trace(event.getDeletedData());
+				var uoms:Array = event.getDeletedData();
+				if(uoms == null || uoms.length <= 0){
+					return;
+				}
+				var task:Array = new Array(uoms.length);
+				for(var i:int = 0; i < uoms.length; i ++){
+					task[i] = uoms[i].id;
+				}
+				resultToken = server.softDeleteUnitOfProjects(task);
+				lastRPCType = DELETE;
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Update Handlers
+			//////////////////////////////////////////////////////	
+			private function popupModifyView(event:ActionTableEvent):void {
+				if (null == event.getRequestModifyData()) {
+					return ;
+				}
+				if(updateForm == null){
+					updateForm = new UnitOfProjectModifyDialog();
+				}else{
+					updateForm.reset();
+				}
+				updateForm.setUnitOfProject(event.getRequestModifyData() as UnitOfProjectTO);
+				updateForm.setIndex(event.getRequestModifyRowIndex());
+				PopUpManager.addPopUp(updateForm as IFlexDisplayObject, this as DisplayObject, true);
+				PopUpManager.centerPopUp(updateForm);
+				updateForm.updateButton.addEventListener(FlexEvent.BUTTON_DOWN,onUpdate);
+				updateForm.updateAndCloseButton.addEventListener(FlexEvent.BUTTON_DOWN,onUpdateAndClose);
+				updateForm.closeBtn.addEventListener(FlexEvent.BUTTON_DOWN,onUpdateClose);
+				dataTable.updateItem(event.getRequestModifyData(), event.getRequestModifyRowIndex())
+			}
+			
+			protected function onUpdate(event:FlexEvent):void
+			{
+				updateUnitOfProject();
+				
+			}
+			
+			protected function onUpdateAndClose(event:FlexEvent):void
+			{
+				updateUnitOfProject();
+				PopUpManager.removePopUp(updateForm);
+			}
+			
+			protected function onUpdateClose(event:FlexEvent):void
+			{
+				PopUpManager.removePopUp(updateForm);
+			}
+			
+			protected function updateUnitOfProject() : void {
+				var unitOfProject:UnitOfProjectTO = updateForm.getUnitOfProject();
+				unitOfProject.contractId = updateForm.contractComboBox.selectedItem["id"];
+				unitOfProject.billToContact = updateForm.billToContactComboBox.selectedItem as ContactTO;
+				unitOfProject.shipToContact = updateForm.shipToContactComboBox.selectedItem as ContactTO;
+				unitOfProject.soldToContact = updateForm.soldToContactComboBox.selectedItem as ContactTO;
+				unitOfProject.payerContact = updateForm.payerContactComboBox.selectedItem as ContactTO;
+				if (null != updateForm.projectComboBox.selectedItem) {
+       				unitOfProject.projectId = updateForm.projectComboBox.selectedItem["id"];
+       				unitOfProject.projectName = updateForm.projectComboBox.selectedItem["name"];
+				}
+				unitOfProject.startDate = updateForm.startDateField.selectedDate;
+				unitOfProject.endDate = updateForm.endDateField.selectedDate;
+				
+				dataTable.updateItem(unitOfProject, updateForm.getTableIndex());
+			}
+			
+			private function executeUpdate(event:ActionTableEvent):void {
+				var modified:Array = event.getSubmitingData();
+				if(!modified || modified.length <= 0){
+					return;
+				}
+				var submitData:ArrayCollection = new ArrayCollection();
+				for (var i:int = 0; i < modified.length; i ++) {
+					if (null == modified[i]) {
+						continue;
+					}
+					submitData.addItem(modified[i]);
+				}
+				modified = submitData.toArray();
+				resultToken = server.updateUnitOfProjects(modified);
+				lastRPCType = UPDATE;
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : RPC Handlers
+			//////////////////////////////////////////////////////	
+			private function onFault(event:FaultEvent):void {
+				trace(event);
+				Alert.show(event.fault.faultString, "Error");
+				initDataModel();
+			}
+			
+			private function initDataModel():void {
+				queryServer.findUnitOfProjects();
+			}      
+			
+			private function onSuccess(event:ResultEvent):void {
+				if((!resultToken)||(!resultToken.message)||(!resultToken.message.body)){
+					return;
+				}
+				var body:Array = resultToken.message.body as Array;
+				if(lastRPCType == CREATE){
+					if(null != resultToken.result){
+						resultToken = queryServer.findUnitOfProjectById(resultToken.result);
+						lastRPCType = QUERY;
+					} else {
+						lastRPCType = INVALID;
+					}
+				} else {
+					lastRPCType = INVALID;
+				}
+			}
+			
+			private function onDataFetch(event:ResultEvent):void{
+				if (event.result is ArrayCollection) {
+					dataList = ArrayCollection(event.result).toArray();
+					dataTable.model = dataList;
+				} else {
+					dataTable.submitCreateData(event.result);
+				}
+			}
+			
+			private function onDataFetchFault(event:FaultEvent):void{
+				trace(event.fault.toString());
+				Alert.show(event.fault.toString());
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Methods : Override Methods
+			//////////////////////////////////////////////////////	
+			public override function reset():void{
+				dataTable.reset();
+			}            
+			
+			
+		]]>
+	</mx:Script>
+	
+	<mx:RemoteObject id="queryServer" destination="Contract"/>
+	<mx:RemoteObject id="server" destination="Contract"/>
+	<mx:Panel width="100%" height="100%" fontSize="12" layout="vertical" title="单位工程">
+		<components:ActionTable id="dataTable"/>
+	</mx:Panel>
+</framework:ManagedView>
+

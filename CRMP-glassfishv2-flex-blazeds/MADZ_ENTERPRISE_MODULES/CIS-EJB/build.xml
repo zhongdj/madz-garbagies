@@ -1,0 +1,59 @@
+<project name="CIS-EJB-Module" default="jar">
+	<property name="jar.file.name" value="cis-ejb3.jar" />
+	<property name="root.dir" value="../../" />
+
+	<path id="build.classpath">
+		<fileset dir="${root.dir}/${3rd-party.home}">
+			<include name="**/*.jar" />
+		</fileset>
+		<fileset dir="${root.dir}/${dist.platform.home}">
+			<include name="**/*.jar" />
+		</fileset>
+		<fileset dir="${root.dir}/${dist.modules.home}">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+
+	<target name="delete-dist">
+		<delete dir="dist" quiet="true" />
+		<delete dir="bin" quiet="true" />
+	</target>
+
+	<target name="clean">
+		<delete dir="dist" quiet="true" />
+		<mkdir dir="dist/classes/META-INF" />
+	</target>
+
+	<target name="compile" depends="clean">
+		<javac debug="true" srcdir="src" destdir="dist/classes"
+			classpathref="build.classpath" />
+	</target>
+
+	<target name="copy-meta" depends="clean, compile">
+		<copy todir="dist/classes/META-INF">
+			<fileset dir="src/conf" includes="*.xml" />
+			<fileset dir="src/conf" includes="*.MF" />
+		</copy>
+
+		<copy todir="dist/classes/conf">
+			<fileset dir="src/java/conf" includes="*.*" />
+		</copy>
+	</target>
+
+	<target name="jar" depends="copy-meta">
+		<jar compress="true" jarfile="dist/${jar.file.name}" basedir="dist/classes" />
+		<copy todir="${root.dir}/${dist.modules.home}">
+			<fileset dir="dist/" includes="${jar.file.name}" />
+		</copy>
+	</target>
+
+	<target name="findBugs" depends="jar">
+		<findbugs home="${root.dir}/${findbugs.home}" classpathref="build.classpath"
+			output="xml" outputFile="dist/findbugs.xml">
+			<sourcePath path="src" />
+			<class location="${default.target.dir}/${jar.file.name}" />
+		</findbugs>
+	</target>
+
+	<target name="report" depends="jar, findBugs" />
+</project>

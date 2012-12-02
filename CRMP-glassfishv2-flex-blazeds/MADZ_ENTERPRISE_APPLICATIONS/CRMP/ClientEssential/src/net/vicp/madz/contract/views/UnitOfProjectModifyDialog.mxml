@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="624" height="310" title="编辑单位工程" creationComplete="onCreateComplete(event);" fontSize="16">
+<mx:Script>
+	<![CDATA[
+		import mx.collections.ArrayCollection;
+		import mx.events.FlexEvent;
+		import mx.events.ListEvent;
+		import mx.rpc.events.FaultEvent;
+		import mx.rpc.events.ResultEvent;
+		
+		import net.vicp.madz.contract.ContactUtil;
+		import net.vicp.madz.contract.vo.UnitOfProjectTO;
+		import net.vicp.madz.utils.SelectUtils;
+		
+		private var parentView : Panel;
+		
+		private var bill2AccountId : String;
+		private var sold2AccountId : String;
+		private var ship2AccountId : String;
+		private var payerAccountId : String;
+		
+		private var unitOfProject:UnitOfProjectTO;
+		
+		private var contracts : Array;
+		private var index : int;
+		
+		public function set parentDialog(parent: Panel) : void {
+			this.parentView = parent;
+		}
+		
+		
+		public function reset():void{
+			nameInput.text = "";
+			updateButton.enabled = false;
+			updateAndCloseButton.enabled = false;
+			contractObjectQuery.findContracts();
+		}
+		
+		public function setUnitOfProject(uop : UnitOfProjectTO) : void {
+			this.unitOfProject = uop;
+		}
+		
+		private function onCreateComplete(event:FlexEvent):void{
+			commonObjectQuery.addEventListener(ResultEvent.RESULT,onFetch);
+			commonObjectQuery.addEventListener(FaultEvent.FAULT,onFault);
+			
+			contractObjectQuery.addEventListener(ResultEvent.RESULT, onContractFetch);
+			contractObjectQuery.findContracts();
+			//commonObjectQuery.findUnitOfProject();
+			if (null != parentView) {
+				var contactUtil:ContactUtil = new ContactUtil();
+				
+				if (null != parentView["bill2AccountComboBox"]["selectedItem"]) {
+					bill2AccountId = parentView["bill2AccountComboBox"]["selectedItem"]["id"];
+					contactUtil.findContacts(bill2AccountId, "BillTo", function(contacts:Object) : void {
+						billToContactComboBox.dataProvider = contacts;
+					} );
+				}
+				
+				
+				if (null != parentView["sold2AccountComboBox"]["selectedItem"]) {
+					sold2AccountId = parentView["sold2AccountComboBox"]["selectedItem"]["id"];
+					contactUtil.findContacts(sold2AccountId, "SoldTo", function(contacts:Object) : void {
+						soldToContactComboBox.dataProvider = contacts;
+					} );
+				}
+				if (null != parentView["ship2AccountComboBox"]["selectedItem"]) {
+					ship2AccountId = parentView["ship2AccountComboBox"]["selectedItem"]["id"];
+					contactUtil.findContacts(ship2AccountId, "ShipTo", function(contacts:Object) : void {
+						shipToContactComboBox.dataProvider = contacts;
+					} );
+				}
+				if (null != parentView["payerAccountComboBox"]["selectedItem"]) {
+					payerAccountId = parentView["payerAccountComboBox"]["selectedItem"]["id"];
+					contactUtil.findContacts(payerAccountId, "Payer", function(contacts:Object) : void {
+						payerContactComboBox.dataProvider = contacts;
+					} );
+				}
+				
+				
+			}
+			
+			stage.focus = nameInput;
+			validate();
+		}
+		
+		
+		private function onFetch(event:ResultEvent):void{
+		}
+		
+		private function onFault(event:FaultEvent):void{
+	
+		}
+		
+		private function validate() : void {
+			if (null != nameInput.text && 0 < nameInput.text.length) {
+				updateButton.enabled = true;
+				updateAndCloseButton.enabled = true;
+			} else {
+				updateButton.enabled = false;
+				updateAndCloseButton.enabled = false;
+			}
+		}
+				
+		protected function onBill2ContactCreationComplete(event:FlexEvent):void
+		{
+			if (null != this.unitOfProject && null != this.unitOfProject.billToContact && null != this.unitOfProject.billToContact.id) {
+				var collection : ArrayCollection = new ArrayCollection();
+				var dataProvider:Array = ArrayCollection(this.billToContactComboBox.dataProvider).toArray();
+				this.billToContactComboBox.selectedItem = SelectUtils.getSelectedItem(this.unitOfProject.billToContact.id, dataProvider);
+			}
+		}
+		
+		protected function onShip2ContactCreationComplete(event:FlexEvent):void
+		{
+			if (null != this.unitOfProject && null != this.unitOfProject.shipToContact && null != this.unitOfProject.shipToContact.id) {
+				var collection : ArrayCollection = new ArrayCollection();
+				var dataProvider:Array = ArrayCollection(this.shipToContactComboBox.dataProvider).toArray();
+				this.shipToContactComboBox.selectedItem = SelectUtils.getSelectedItem(this.unitOfProject.shipToContact.id, dataProvider);
+			}	
+		}
+		
+		protected function onSold2ContactCreationComplete(event:FlexEvent):void
+		{
+			if (null != this.unitOfProject && null != this.unitOfProject.soldToContact && null != this.unitOfProject.soldToContact.id) {
+				var collection : ArrayCollection = new ArrayCollection();
+				var dataProvider:Array = ArrayCollection(this.soldToContactComboBox.dataProvider).toArray();
+				this.soldToContactComboBox.selectedItem = SelectUtils.getSelectedItem(this.unitOfProject.soldToContact.id, dataProvider);
+			}	
+		}
+		
+		protected function onPayerContactCreationComplete(event:FlexEvent):void
+		{
+			if (null != this.unitOfProject && null != this.unitOfProject.payerContact && null != this.unitOfProject.payerContact.id) {
+				var collection : ArrayCollection = new ArrayCollection();
+				var dataProvider:Array = ArrayCollection(this.payerContactComboBox.dataProvider).toArray();
+				this.payerContactComboBox.selectedItem = SelectUtils.getSelectedItem(this.unitOfProject.payerContact.id, dataProvider);
+			}	
+		}
+		
+		protected function contractComboBox_creationCompleteHandler(event:FlexEvent):void
+		{
+			if (null != contracts) {
+				contractComboBox.dataProvider = contracts;
+			}
+			
+		}
+		
+		protected function onContractFetch(event:ResultEvent):void
+		{
+			if (event.result is ArrayCollection) {
+				contracts = (event.result as ArrayCollection).toArray();
+			}
+			if (null != contractComboBox) {
+				contractComboBox.dataProvider = contracts;
+			}
+		}
+		
+		public function getUnitOfProject():UnitOfProjectTO
+		{
+			return this.unitOfProject;
+		}
+		
+		public function setIndex(index:int):void
+		{
+			this.index = index;
+			
+		}
+		
+		public function getTableIndex() : int {
+			return this.index;
+		}
+		
+	]]>
+</mx:Script>
+	
+	<mx:Label x="35" y="55" text="名称：" width="76" fontWeight="bold" textAlign="right" height="25"/>
+	<mx:TextInput x="115" y="55" width="179" id="nameInput" tabIndex="2" height="25" change="validate()"/>
+	<mx:Label x="35" y="20" text="合同：" width="76" fontWeight="bold" textAlign="right" height="25"/>
+	<mx:Label x="317" y="56" text="收票联系人：" width="97" fontWeight="bold" textAlign="right" height="25"/>
+	<mx:Label x="35" y="92" text="工程：" width="76" fontWeight="bold" textAlign="right" height="25"/>
+	
+	<mx:Button id="updateButton" x="189" y="220" width="66" label="更新" fontSize="14" tabIndex="7"/>
+	<mx:Button id="closeBtn" x="404" y="218" width="66" label="取消" fontSize="14" tabIndex="8"/>
+	
+	<mx:Button id="updateAndCloseButton" x="267" y="218" width="119" label="更新并关闭" fontSize="14"
+			   tabIndex="7"/>
+	<mx:ComboBox id="projectComboBox" x="115" y="92" width="179" editable="true"></mx:ComboBox>
+	<mx:DateField id="startDateField" x="115" y="126" width="179"/>
+	<mx:DateField id="endDateField" x="115" y="161" width="179"/>
+	<mx:Label x="20" y="161" text="收工日期：" width="91" fontWeight="bold" textAlign="right" height="25"/>
+	<mx:Label x="20" y="126" text="开工日期：" width="91" fontWeight="bold" textAlign="right" height="25"/>
+	<mx:ComboBox id="billToContactComboBox" x="422" y="56" editable="true" labelField="name" creationComplete="onBill2ContactCreationComplete(event)"></mx:ComboBox>
+	<mx:Label x="317" y="92" text="收货联系人：" width="97" fontWeight="bold" textAlign="right" height="25"/>
+	<mx:ComboBox id="shipToContactComboBox" x="422" y="92" editable="true" labelField="name" creationComplete="onShip2ContactCreationComplete(event)"></mx:ComboBox>
+	<mx:Label x="317" y="126" text="买方联系人：" width="97" fontWeight="bold" textAlign="right" height="25"/>
+	<mx:ComboBox id="soldToContactComboBox" x="422" y="126" editable="true" labelField="name" creationComplete="onSold2ContactCreationComplete(event)"></mx:ComboBox>
+	<mx:Label x="317" y="159" text="付款联系人：" width="97" fontWeight="bold" textAlign="right" height="25"/>
+	<mx:ComboBox id="payerContactComboBox" x="422" y="159" editable="true" labelField="name" creationComplete="onPayerContactCreationComplete(event)"></mx:ComboBox>
+	<mx:ComboBox id="contractComboBox" x="115" y="18" width="179" editable="true" creationComplete="contractComboBox_creationCompleteHandler(event)"></mx:ComboBox>
+
+	<mx:RemoteObject id="contractObjectQuery" destination="Contract"/>
+	<mx:RemoteObject id="commonObjectQuery" destination="CommonObjectQuery"/>
+
+</mx:Panel>

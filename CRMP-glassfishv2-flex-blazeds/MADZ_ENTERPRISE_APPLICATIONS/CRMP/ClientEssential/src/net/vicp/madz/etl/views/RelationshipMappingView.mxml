@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="utf-8"?>
+<framework:ManagedView xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:components="net.vicp.madz.components.*"
+					   xmlns:framework="net.vicp.madz.framework.views.*" layout="vertical" width="100%" height="100%"  creationComplete="init();">
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.*;
+			import mx.controls.Alert;
+			import mx.controls.dataGridClasses.DataGridColumn;
+			import mx.core.IFlexDisplayObject;
+			import mx.events.FlexEvent;
+			import mx.events.ListEvent;
+			import mx.managers.PopUpManager;
+			import mx.rpc.AsyncToken;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			import net.vicp.madz.biz.common.vo.UnitOfMeasureCTO;
+			import net.vicp.madz.biz.common.vo.UnitOfMeasureQTO;
+			import net.vicp.madz.biz.common.vo.UnitOfMeasureUTO;
+			import net.vicp.madz.components.events.ActionTableEvent;		
+			import net.vicp.madz.components.renderer.DateRendererFactory;
+			
+			//////////////////////////////////////////////////////
+			////
+			//// Fields 
+			////
+			//////////////////////////////////////////////////////
+			private static const INVALID:int = -1;
+			private static const QUERY:int = 0;
+			private static const CREATE:int = 1;
+			private static const UPDATE:int = 2;
+			private static const DELETE:int = 3;
+			
+//			private var queryForm:UnitOfMeasureQueryDialog;
+			private var createForm:RelationshipMappingCreateDialog;
+			
+			[Bindable]
+			public var dataList:Array;
+			[Bindable]
+			private var dataColumnProvider:Array;
+			private var resultToken:AsyncToken;
+			private var lastRPCType:int;
+			//////////////////////////////////////////////////////
+			////
+			//// Methods 
+			//// 
+			//////////////////////////////////////////////////////
+			
+			//////////////////////////////////////////////////////
+			//// Methods : initialize 
+			//////////////////////////////////////////////////////
+			private function init():void{
+				initActionTable();
+				initListeners();
+			}
+			
+			private function initActionTable():void {
+				dataColumnProvider = new Array();
+				
+				var col:DataGridColumn = new DataGridColumn("rawData");
+				col.headerText="原始生产数据内容";
+				col.width = 240;
+				col.dataField="rawData";
+				dataColumnProvider.push(col);
+				
+				col = new DataGridColumn("mappingKey");
+				col.headerText="映射键值";
+				col.dataField="mappingKey";
+				dataColumnProvider.push(col);           
+				
+				col = new DataGridColumn("mappedData");
+				col.headerText="映射后关系键值";
+				col.dataField="mappedData";
+				dataColumnProvider.push(col); 
+				
+				col = new DataGridColumn("columnDescriptorId");
+				col.headerText="列描述主键";
+				col.dataField="columnDescriptorId";
+				dataColumnProvider.push(col);             	
+				
+				col = new DataGridColumn("createdBy");
+				col.headerText="创建者";
+				col.dataField="createdBy";
+				col.editable = false;
+				dataColumnProvider.push(col);             	
+				
+				col = new DataGridColumn("createdOn");
+				col.headerText="创建日期";
+				col.dataField="createdOn";
+				col.editable = false;
+				col.itemRenderer = new DateRendererFactory("createdOn");
+				dataColumnProvider.push(col);       
+				
+				actionTable.columnProvider = dataColumnProvider;
+			}
+			
+			
+			private function initListeners():void {
+				actionTable.addEventListener(ListEvent.ITEM_CLICK,onItemSelected);
+				//For Query
+				actionTable.addEventListener(ActionTableEvent.REQUEST_DATA_QUERY,popupQueryView);
+				actionTable.addEventListener(ActionTableEvent.SUBMIT_QUERY_CONDITION,executeQuery);
+				//For Modify
+				actionTable.addEventListener(ActionTableEvent.REQUEST_DATA_MODIFY,popupModifyView);
+				actionTable.addEventListener(ActionTableEvent.DATA_MODIFY_SUBMIT,executeUpdate);
+				//For Create
+				actionTable.addEventListener(ActionTableEvent.DATA_CREATE,popupCreateView);
+				//For Delete
+				actionTable.addEventListener(ActionTableEvent.DATA_DELETE,executeDelete);
+				
+				//For Create, Modify, Delete
+				etl.addEventListener(FaultEvent.FAULT,onFault);
+				etl.addEventListener(ResultEvent.RESULT,onSuccess);
+				
+				//For Query
+				etlQuery.addEventListener(ResultEvent.RESULT,onUomFetch);
+				etlQuery.addEventListener(FaultEvent.FAULT,onUomFault);
+				
+			}
+			
+			//////////////////////////////////////////////////////
+			////
+			//// Event Handlers
+			//// 
+			//////////////////////////////////////////////////////			
+			private function onItemSelected(event:ListEvent):void{
+				trace("Item Selected");
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Query Handlers
+			//////////////////////////////////////////////////////		
+			private function popupQueryView(event:ActionTableEvent):void{
+//				if(queryForm == null){
+//					queryForm = new UnitOfMeasureQueryDialog();
+//				}else{
+//					queryForm.reset();
+//				}
+//				PopUpManager.addPopUp(queryForm as IFlexDisplayObject, this as DisplayObject, true);
+//				PopUpManager.centerPopUp(queryForm);
+//				queryForm.queryButton.addEventListener(FlexEvent.BUTTON_DOWN,onQuery);
+//				queryForm.closeBtn.addEventListener(FlexEvent.BUTTON_DOWN,onQueryClose);
+			}
+			
+//			private function onQuery(event:FlexEvent):void {
+//				actionTable.submitQueryCondition(queryForm.deletedCheckBox.selected);
+//			}
+//			
+//			private function onQueryClose(event:FlexEvent):void {
+//				PopUpManager.removePopUp(queryForm);
+//			}
+			
+			private function executeQuery(event:ActionTableEvent):void{
+				var deleted:Boolean =  Boolean(event.getQueryCondition());
+				etlQuery.findContentMappingDescriptors();
+//				PopUpManager.removePopUp(queryForm);
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Create Handlers
+			//////////////////////////////////////////////////////	
+			private function popupCreateView(event:ActionTableEvent):void{
+//				if(createForm == null){
+//					createForm = new RelationshipMappingCreateDialog();
+//				}else{
+//					createForm.reset();
+//				}
+//				PopUpManager.addPopUp(createForm as IFlexDisplayObject, this as DisplayObject, true);
+//				PopUpManager.centerPopUp(createForm);
+//				createForm.createButton.addEventListener(FlexEvent.BUTTON_DOWN,onCreate);
+//				createForm.createAndCloseButton.addEventListener(FlexEvent.BUTTON_DOWN,onCreateAndClose);
+//				createForm.closeBtn.addEventListener(FlexEvent.BUTTON_DOWN,onCreateClose);
+			}
+			
+			private function onCreate(event:FlexEvent):void{
+				createUom();
+			}
+			private function onCreateAndClose(event:FlexEvent):void{
+				createUom();
+				PopUpManager.removePopUp(createForm);
+			}
+			
+			private function onCreateClose(event:FlexEvent):void{
+				PopUpManager.removePopUp(createForm);
+			}
+			
+			private function createUom() : void {
+//				var newUom:UnitOfMeasureCTO = new UnitOfMeasureCTO();
+//				newUom.name = this.createForm.nameInput.text;
+//				newUom.description = this.createForm.descriptionTextArea.text;
+//				
+//				this.resultToken = etl.createUnitOfMeasure(newUom);
+//				this.lastRPCType = CREATE;
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Delete Handlers
+			//////////////////////////////////////////////////////	
+			private function executeDelete(event:ActionTableEvent):void{
+				trace(event.getDeletedData());
+				var uoms:Array = event.getDeletedData();
+				if(uoms == null || uoms.length <= 0){
+					return;
+				}
+				var task:Array = new Array(uoms.length);
+				for(var i:int = 0; i < uoms.length; i ++){
+					task[i] = uoms[i].id;
+				}
+				resultToken = etl.removeUnitOfMeasure(task);
+				lastRPCType = DELETE;
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Update Handlers
+			//////////////////////////////////////////////////////	
+			private function popupModifyView(event:ActionTableEvent):void {
+				trace(event);
+			}
+			
+			private function executeUpdate(event:ActionTableEvent):void {
+				var modified:Array = event.getSubmitingData();
+				if(!modified || modified.length <= 0){
+					return;
+				}
+				resultToken = etl.updateContentMappingDescriptors(modified);
+				lastRPCType = UPDATE;
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : RPC Handlers
+			//////////////////////////////////////////////////////	
+			private function onFault(event:FaultEvent):void {
+				trace(event);
+				Alert.show(event.fault.faultString, "Error");
+				initDataModel();
+			}
+			
+			private function initDataModel():void {
+				etlQuery.findUnitOfMeasure(false);
+			}      
+			
+			private function onSuccess(event:ResultEvent):void {
+				if((!resultToken)||(!resultToken.message)||(!resultToken.message.body)){
+					return;
+				}
+				var body:Array = resultToken.message.body as Array;
+				if(lastRPCType == CREATE){
+					if(null != resultToken.result){
+						//resultToken = etlQuery.findUnitOfMeasureById(resultToken.result);
+						lastRPCType = QUERY;
+					} else {
+						lastRPCType = INVALID;
+					}
+				} else {
+					lastRPCType = INVALID;
+				}
+			}
+			
+			private function onUomFetch(event:ResultEvent):void{
+				if (event.result is ArrayCollection) {
+					dataList = ArrayCollection(event.result).toArray();
+					actionTable.model = dataList;
+				} else {
+					actionTable.submitCreateData(event.result);
+				}
+			}
+			
+			private function onUomFault(event:FaultEvent):void{
+				trace(event.fault.toString());
+				Alert.show(event.fault.toString());
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Methods : Override Methods
+			//////////////////////////////////////////////////////	
+			public override function reset():void{
+				actionTable.reset();
+			}            
+		]]>
+	</mx:Script>
+	
+	<mx:RemoteObject id="etlQuery" destination="ETL"/>
+	<mx:RemoteObject id="etl" destination="ETL"/>
+	<mx:Panel width="100%" height="100%" fontSize="12" layout="vertical" title="关系映射视图">
+		<components:ActionTable id="actionTable"/>
+	</mx:Panel>
+</framework:ManagedView>
+

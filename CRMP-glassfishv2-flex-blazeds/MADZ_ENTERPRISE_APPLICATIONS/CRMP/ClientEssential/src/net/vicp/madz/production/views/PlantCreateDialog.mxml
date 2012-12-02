@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml"
+		  width="414" height="200" creationComplete="onCreateComplete(event);" fontSize="12"
+		  layout="absolute" title="创建搅拌站">
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.ArrayCollection;
+			import mx.events.FlexEvent;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			public function reset():void{
+				if (null != mixingPlantNameInput) {
+					mixingPlantNameInput.text = "";
+				}
+				if (null != operatorBox) {
+					operatorBox.selectedIndex = -1;
+				}
+			}
+			
+			public function onCreateComplete(event:FlexEvent):void {
+				server.addEventListener(ResultEvent.RESULT,onFetch);
+				server.findAllUser();
+			}
+			
+			private function onFetch(event:ResultEvent) : void {
+				if (null != event.result) {
+					operatorBox.dataProvider = event.result;
+					operatorBox.labelField = "username";
+				}
+			}
+		]]>
+	</mx:Script>
+	<mx:Label x="10" y="36" width="122" fontWeight="bold" text="搅拌站名称:" textAlign="right"/>
+	<mx:TextInput id="mixingPlantNameInput" x="140" y="34" width="211"/>
+	<mx:Button id="createButton" x="51" y="107" width="95" label="创建"/>
+	<mx:Button id="createAndCloseButton" x="158" y="107" width="95" label="创建并关闭"/>
+	<mx:Button id="closeButton" x="261" y="107" width="93" label="关闭"/>
+	<mx:Label x="10" y="70" width="122" fontWeight="bold" text="操作员姓名:" textAlign="right"/>
+	<mx:ComboBox id="operatorBox" x="140" y="70" width="211" editable="true"/>
+
+	<mx:RemoteObject id="server" destination="UI"/>
+</mx:Panel>

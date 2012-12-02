@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:navigator="net.vicp.madz.framework.views.navigators.*"   xmlns:views="net.vicp.madz.system.views.*" width="100%" height="100%">
+		<mx:Script source="../../as/main.as" />
+		<mx:Script>
+			<![CDATA[
+				import mx.containers.Box;
+				private var inside:FrameInside = new FrameInside();
+				
+				public function initializeInside():void{
+					addChild(inside);
+				}
+				
+				public function get viewBox():Box{
+					return inside.viewBox;
+				}
+				
+				public function get navigatorBox():Canvas{
+					return inside.navigatorBox;
+				}
+			]]>
+		</mx:Script>
+</mx:Canvas>

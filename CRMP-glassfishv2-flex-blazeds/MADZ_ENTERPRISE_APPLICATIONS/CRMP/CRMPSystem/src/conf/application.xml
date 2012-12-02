@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<application version="5" xmlns="http://java.sun.com/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/application_5.xsd">
+  <display-name>CRMPSystem</display-name>
+  <module>
+    <web>
+      <web-uri>crmp-web.war</web-uri>
+      <context-root>/apps</context-root>
+    </web>
+  </module>
+  <module>
+    <ejb>cis-ejb3.jar</ejb>
+  </module>
+  <module>
+    <ejb>crmp-ejb3.jar</ejb>
+  </module>
+  <security-role>
+    <role-name>SA</role-name>
+  </security-role>
+  <security-role>
+    <role-name>ADMIN</role-name>
+  </security-role>
+  <security-role>
+    <role-name>OP</role-name>
+  </security-role>
+</application>

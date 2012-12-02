@@ -1,0 +1,407 @@
+<?xml version="1.0" encoding="utf-8"?>
+<framework:ManagedView xmlns:mx="http://www.adobe.com/2006/mxml"
+					   xmlns:components="net.vicp.madz.components.*"
+					   xmlns:framework="net.vicp.madz.framework.views.*"
+					   width="100%" height="100%" creationComplete="init();" layout="vertical">
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.*;
+			import mx.controls.Alert;
+			import mx.controls.dataGridClasses.DataGridColumn;
+			import mx.core.IFlexDisplayObject;
+			import mx.events.FlexEvent;
+			import mx.events.ListEvent;
+			import mx.managers.PopUpManager;
+			import mx.rpc.AsyncToken;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			import net.vicp.madz.production.vo.ProductionRecordTO;
+			import net.vicp.madz.components.events.ActionTableEvent;
+			import net.vicp.madz.components.renderer.DateRendererFactory;
+			
+			
+			//////////////////////////////////////////////////////
+			////
+			//// Fields 
+			////
+			//////////////////////////////////////////////////////
+			private static const INVALID:int = -1;
+			private static const QUERY:int = 0;
+			private static const CREATE:int = 1;
+			private static const UPDATE:int = 2;
+			private static const DELETE:int = 3;
+			
+			private var queryForm:ProductionRecordQueryDialog ;
+			//private const createForm:ContactCreateDialog = new ContactCreateDialog();
+			private const updateForm:ProductionRecordModifyDialog = new ProductionRecordModifyDialog();
+			
+			[Bindable]
+			public var list:Array;
+			
+			[Bindable]
+			private var columnProvider:Array;
+			private var resultToken:AsyncToken;
+			private var lastRPCType:int;
+			
+			//////////////////////////////////////////////////////
+			////
+			//// Methods 
+			//// 
+			//////////////////////////////////////////////////////
+			
+			//////////////////////////////////////////////////////
+			//// Methods : initialize 
+			//////////////////////////////////////////////////////
+			private function init():void{
+				initTable();
+				initListeners();
+			}
+			
+			private function initTable():void {
+				columnProvider = new Array();
+				
+				var col:DataGridColumn = new DataGridColumn("billed");
+				col.headerText="已生成账单";
+				col.dataField="billed";
+				columnProvider.push(col);
+				
+//				col = new DataGridColumn("description");
+//				col.headerText="原始生产数据摘要";
+//				col.dataField="description";
+//				columnProvider.push(col);           
+				
+				col = new DataGridColumn("productionTime");
+				col.headerText="生产时间";
+				col.dataField="productionTime";
+				col.editable = false;
+				col.itemRenderer = new DateRendererFactory("productionTime");
+				columnProvider.push(col);
+				
+				
+				col = new DataGridColumn("quantity");
+				col.headerText = "输出量";
+				col.dataField = "quantity";
+				col.editable = true;
+				columnProvider.push(col); 
+				
+				col = new DataGridColumn("uomName");
+				col.headerText = "计量单位";
+				col.dataField = "uomName";
+				col.editable = false;
+				columnProvider.push(col); 
+				
+				col = new DataGridColumn("unitOfProjectName");
+				col.headerText = "单位工程";
+				col.dataField = "unitOfProjectName";
+				col.editable = false;
+				columnProvider.push(col); 
+				
+				col = new DataGridColumn("unitOfProjectOwnerName");
+				col.dataField="unitOfProjectOwnerName";
+				col.headerText="施工单位";
+				col.editable = false;
+				columnProvider.push(col);
+				
+				col = new DataGridColumn("truckNumber");
+				col.headerText="卡车号码";
+				col.dataField="truckNumber";
+				col.editable = true;
+				columnProvider.push(col);
+				
+				col = new DataGridColumn("projectOwnerName");
+				col.headerText="工程单位";
+				col.dataField="projectOwnerName";
+				col.editable = false;
+				columnProvider.push(col);
+				
+				col = new DataGridColumn("referenceNumber");
+				col.headerText="参考号码";
+				col.dataField="referenceNumber";
+				col.editable = true;
+				columnProvider.push(col); 
+				
+				col = new DataGridColumn("mixingPlantName");
+				col.headerText = "搅拌站名称";
+				col.dataField = "mixingPlantName";
+				col.editable = false;
+				columnProvider.push(col); 
+				
+				col = new DataGridColumn("partName");
+				col.headerText = "浇筑部位";
+				col.dataField = "partName";
+				col.editable = false;
+				columnProvider.push(col); 
+				
+//				col = new DataGridColumn("createdByName");
+//				col.headerText="更新者";
+//				col.dataField="updatedByName";
+//				col.editable = false;
+//				columnProvider.push(col);   
+//				
+//				col = new DataGridColumn("updatedOn");
+//				col.headerText="更新日期";
+//				col.dataField="updatedOn";
+//				col.editable = false;
+//				col.itemRenderer = new DateRendererFactory("updatedOn");
+//				columnProvider.push(col);             	
+//				
+//				col = new DataGridColumn("createdByName");
+//				col.headerText="创建者";
+//				col.dataField="createdByName";
+//				col.editable = false;
+//				columnProvider.push(col);             	
+//				
+//				col = new DataGridColumn("createdOn");
+//				col.headerText="创建日期";
+//				col.dataField="createdOn";
+//				col.editable = false;
+//				col.itemRenderer = new DateRendererFactory("createdOn");
+//				columnProvider.push(col);       
+				
+				table.columnProvider = columnProvider;
+			}
+			
+			
+			private function initListeners():void {
+				table.addEventListener(ListEvent.ITEM_CLICK,onItemSelected);
+				//For Query
+				table.addEventListener(ActionTableEvent.REQUEST_DATA_QUERY,popupQueryView);
+				table.addEventListener(ActionTableEvent.SUBMIT_QUERY_CONDITION,executeQuery);
+				
+				//For Modify
+				table.addEventListener(ActionTableEvent.REQUEST_DATA_MODIFY,popupModifyView);
+				//table.addEventListener(ActionTableEvent.DATA_MODIFY,onLocalItemUpdate);
+				
+				table.addEventListener(ActionTableEvent.DATA_MODIFY_SUBMIT,executeUpdate);
+				//For Create
+				table.addEventListener(ActionTableEvent.DATA_CREATE,popupCreateView);
+				//For Delete
+				table.addEventListener(ActionTableEvent.DATA_DELETE,executeDelete);
+				
+				//For Create, Modify, Delete
+				server.addEventListener(FaultEvent.FAULT,onFault);
+				server.addEventListener(ResultEvent.RESULT,onSuccess);
+				//server.addEventListener(ResultEvent.RESULT,onFetch);
+				
+				
+			}
+			
+			//////////////////////////////////////////////////////
+			////
+			//// Event Handlers
+			//// 
+			//////////////////////////////////////////////////////			
+			private function onItemSelected(event:ListEvent):void{
+				trace("Item Selected");
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Query Handlers
+			//////////////////////////////////////////////////////
+			private function popupQueryView(event:ActionTableEvent):void{
+				if(queryForm == null){
+					queryForm = new ProductionRecordQueryDialog();
+				}else{
+					queryForm.reset();
+				}
+				PopUpManager.addPopUp(queryForm as IFlexDisplayObject, this as DisplayObject, true);
+				PopUpManager.centerPopUp(queryForm);
+				queryForm.queryButton.addEventListener(FlexEvent.BUTTON_DOWN,onQuery);
+				queryForm.closeButton.addEventListener(FlexEvent.BUTTON_DOWN,onQueryClose);
+			}
+			
+			private function onQuery(event:FlexEvent):void {
+				//table.submitQueryCondition(queryForm.categoryNameInput.text);
+			}
+			
+			private function onQueryClose(event:FlexEvent):void {
+				PopUpManager.removePopUp(queryForm);
+			}
+			
+			private function executeQuery(event:ActionTableEvent):void{
+//				var condition:Object = event.getQueryCondition();
+//				if(condition is String && String(condition).length > 0){
+//					commonObjectQuery.findCategory(String(condition));
+//				}else{
+//					commonObjectQuery.findCategory();
+//				}            	
+//				PopUpManager.removePopUp(queryForm);
+				resultToken = server.findProductionRecords();
+				lastRPCType = QUERY;
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Create Handlers
+			//////////////////////////////////////////////////////	
+			private function popupCreateView(event:ActionTableEvent):void{
+//				createForm.reset();
+//				if (null == list) {
+//					executeQuery(null);
+//				}
+//				PopUpManager.addPopUp(createForm as IFlexDisplayObject, this as DisplayObject, true);
+//				PopUpManager.centerPopUp(createForm);
+//				createForm.createButton.addEventListener(FlexEvent.BUTTON_DOWN,onCreate);
+//				createForm.createAndCloseButton.addEventListener(FlexEvent.BUTTON_DOWN,onCreateAndClose);
+//				createForm.closeButton.addEventListener(FlexEvent.BUTTON_DOWN,onCreateClose);
+			}
+			
+//			private function onCreate(event:FlexEvent):void{
+//				createContact();
+//			}
+//			private function onCreateAndClose(event:FlexEvent):void{
+//				createContact();
+//				PopUpManager.removePopUp(createForm);
+//			}
+			
+//			private function onCreateClose(event:FlexEvent):void{
+//				PopUpManager.removePopUp(createForm);
+//			}
+			
+//			private function createContact() : void {
+//				var contact:ContactTO = new ContactTO();
+//				contact.name = this.createForm.nameInput.text;
+//				contact.email = this.createForm.emailInput.text;
+//				contact.mobile = this.createForm.mobileInput.text;
+//				contact.telephone = this.createForm.telephoneInput.text;
+//				contact.fax = this.createForm.faxInput.text;
+//				//true for male
+//				contact.sex = this.createForm.sexBox.selectedIndex > 0 ? false : true;
+//				
+//				if (this.createForm.contactTypeBox.selectedIndex == 0) {
+//					contact.contactType = "ShipTo";
+//				} else if (this.createForm.contactTypeBox.selectedIndex == 1) {
+//					contact.contactType = "BillTo";
+//				} else if (this.createForm.contactTypeBox.selectedIndex == 2) {
+//					contact.contactType = "Payer";
+//				} else if (this.createForm.contactTypeBox.selectedIndex == 3) {
+//					contact.contactType = "SoldTo";
+//				}
+//				
+//				this.resultToken = server.createContact(contact);
+//				this.lastRPCType = CREATE;
+//			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Delete Handlers
+			//////////////////////////////////////////////////////	
+			private function executeDelete(event:ActionTableEvent):void{
+				trace(event.getDeletedData());
+				var data:Array = event.getDeletedData();
+				if(data == null || data.length <= 0){
+					return;
+				}
+				var task:Array = new Array(data.length);
+				for(var i:int = 0; i < data.length; i ++){
+					task[i] = data[i].id;
+				}
+				resultToken = server.removeProductionRecords(task);
+				lastRPCType = DELETE;
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Update Handlers
+			//////////////////////////////////////////////////////	
+			private function popupModifyView(event:ActionTableEvent):void {
+				if (null == event.getRequestModifyData()) {
+					return ;
+				}
+				updateForm.reset();
+				PopUpManager.addPopUp(updateForm as IFlexDisplayObject, this as DisplayObject, true);
+				PopUpManager.centerPopUp(updateForm);
+				updateForm.setProductionRecord(event.getRequestModifyData() as ProductionRecordTO, event.getRequestModifyRowIndex());
+				updateForm.updateButton.addEventListener(FlexEvent.BUTTON_DOWN,onUpdate);
+				updateForm.updateAndCloseButton.addEventListener(FlexEvent.BUTTON_DOWN,onUpdateAndClose);
+				updateForm.closeButton.addEventListener(FlexEvent.BUTTON_DOWN,onUpdateClose);
+				
+				trace(event);
+			}
+			
+			private function onUpdate(event:FlexEvent):void{
+				updateProductionRecord();
+			}
+			
+			private function onUpdateAndClose(event:FlexEvent):void{
+				updateProductionRecord();
+				PopUpManager.removePopUp(updateForm);
+			}
+			
+			private function updateProductionRecord() : void {
+				var productionRecord:ProductionRecordTO = updateForm.getProductionRecord();
+				productionRecord.unitOfProjectId = updateForm.unitOfProjectComboBox.selectedItem["id"];
+				productionRecord.unitOfProjectName = updateForm.unitOfProjectComboBox.selectedItem["name"];
+				table.updateItem(productionRecord, updateForm.getTableIndex());
+				
+			}
+			private function onUpdateClose(event:FlexEvent):void{
+				PopUpManager.removePopUp(updateForm);
+			}	
+			
+			private function executeUpdate(event:ActionTableEvent):void {
+				var modified:Array = event.getSubmitingData();
+				if(!modified || modified.length <= 0){
+					return;
+				}
+				//FIXME
+				resultToken = server.updateProductionRecords(modified);
+				lastRPCType = UPDATE;
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : RPC Handlers
+			//////////////////////////////////////////////////////	
+			private function onFault(event:FaultEvent):void {
+				trace(event);
+				Alert.show(event.fault.faultString, "Error");
+				initDataModel();
+			}
+			
+			private function initDataModel():void {
+				server.findProductionRecords();
+			}      
+			
+			private function onSuccess(event:ResultEvent):void {
+				if((!resultToken)||(!resultToken.message)||(!resultToken.message.body)){
+					return;
+				}
+				if (QUERY == lastRPCType) {
+					onFetch(event);
+					return;
+				}
+				var body:Array = resultToken.message.body as Array;
+				if(lastRPCType == CREATE){
+//					if(null != resultToken.result){
+//						resultToken = server.findContactById(resultToken.result);
+//						lastRPCType = QUERY;
+//					} else {
+//						lastRPCType = INVALID;
+//					}
+				} else {
+					lastRPCType = INVALID;
+				}
+			}
+			
+			private function onFetch(event:ResultEvent):void{
+				if (event.result is ArrayCollection) {
+					list = ArrayCollection(event.result).toArray();
+					table.model = list;
+				} else {
+					table.submitCreateData(event.result);
+				}
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Methods : Override Methods
+			//////////////////////////////////////////////////////	
+			public override function reset():void{
+				table.reset();
+			}            
+		]]>
+	</mx:Script>
+	
+	<mx:RemoteObject id="server" destination="Production"/>
+	<mx:Panel width="100%" height="100%" fontSize="12" layout="vertical" title="生产记录视图">
+		<components:ActionTable id="table"/>
+	</mx:Panel>
+</framework:ManagedView>
+

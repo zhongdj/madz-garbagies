@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="utf-8"?>
+<framework:ManagedView xmlns:mx="http://www.adobe.com/2006/mxml"
+					   xmlns:components="net.vicp.madz.components.*"
+					   xmlns:framework="net.vicp.madz.framework.views.*"
+					   width="100%" height="100%" creationComplete="init();" fontSize="12"
+					   layout="vertical">
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.*;
+			import mx.controls.Alert;
+			import mx.controls.DateField;
+			import mx.controls.dataGridClasses.DataGridColumn;
+			import mx.core.IFlexDisplayObject;
+			import mx.events.FlexEvent;
+			import mx.events.ListEvent;
+			import mx.managers.PopUpManager;
+			import mx.rpc.AsyncToken;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			import net.vicp.madz.biz.common.vo.CategoryCTO;
+			import net.vicp.madz.biz.common.vo.CategoryQTO;
+			import net.vicp.madz.biz.common.vo.CategoryUTO;
+			import net.vicp.madz.components.events.ActionTableEvent;
+			import net.vicp.madz.components.renderer.DateRendererFactory;				
+			
+			//////////////////////////////////////////////////////
+			////
+			//// Fields 
+			////
+			//////////////////////////////////////////////////////
+			private static const INVALID:int = -1;
+			private static const QUERY:int = 0;
+			private static const CREATE:int = 1;
+			private static const UPDATE:int = 2;
+			private static const DELETE:int = 3;
+			
+			private var queryForm:CategoryQueryDialog ;
+            private var createForm:CategoryCreateDialog;
+			
+			[Bindable]
+            public var categoryList:Array;
+            [Bindable]
+            private var categoryColumnProvider:Array;
+            private var resultToken:AsyncToken;
+            private var lastRPCType:int;
+			//////////////////////////////////////////////////////
+			////
+			//// Methods 
+			//// 
+			//////////////////////////////////////////////////////
+			
+			//////////////////////////////////////////////////////
+			//// Methods : initialize 
+			//////////////////////////////////////////////////////
+			private function init():void{
+				initCategoryTable();
+				initListeners();
+			}
+			
+            private function initCategoryTable():void {
+            	categoryColumnProvider = new Array();
+            	
+//            	var col:DataGridColumn=new DataGridColumn("id");
+//            	col.headerText="序号";
+//            	col.width = 40;
+//            	col.dataField="id";
+//            	col.editable = false;
+//            	categoryColumnProvider.push(col);
+            	
+            	var col:DataGridColumn;
+            	col = new DataGridColumn("name");
+            	col.headerText="种类名称";
+            	col.width = 260;
+            	col.dataField="name";
+            	categoryColumnProvider.push(col);
+          
+            	col = new DataGridColumn("description");
+            	col.headerText="种类描述";
+            	col.dataField="description";
+            	categoryColumnProvider.push(col);
+            	
+            	col = new DataGridColumn("updatedBy");
+            	col.headerText="更新者";
+            	col.dataField="updatedBy";
+				col.editable = false;
+            	categoryColumnProvider.push(col); 
+            	
+            	col = new DataGridColumn("updatedOn");
+            	col.headerText="更新日期";
+            	col.dataField="updatedOn";
+				col.editable = false;
+				col.itemRenderer = new DateRendererFactory("updatedOn");
+            	categoryColumnProvider.push(col);             	
+            	
+            	col = new DataGridColumn("createdBy");
+            	col.headerText="创建者";
+            	col.dataField="createdBy";
+				col.editable = false;
+            	categoryColumnProvider.push(col);             	
+            	
+            	col = new DataGridColumn("createdOn");
+            	col.headerText="创建日期";
+            	col.dataField="createdOn";
+				col.editable = false;
+				col.itemRenderer = new DateRendererFactory("createdOn");
+            	categoryColumnProvider.push(col);             	
+            	
+            	categoryTable.columnProvider = categoryColumnProvider;
+            }
+
+			
+			private function initListeners():void {
+				categoryTable.addEventListener(ListEvent.ITEM_CLICK,onItemSelected);
+				//For Query
+            	categoryTable.addEventListener(ActionTableEvent.REQUEST_DATA_QUERY,popupQueryView);
+            	categoryTable.addEventListener(ActionTableEvent.SUBMIT_QUERY_CONDITION,executeQuery);
+            	//For Modify
+            	categoryTable.addEventListener(ActionTableEvent.REQUEST_DATA_MODIFY,popupModifyView);
+            	categoryTable.addEventListener(ActionTableEvent.DATA_MODIFY_SUBMIT,executeUpdate);
+            	//For Create
+            	categoryTable.addEventListener(ActionTableEvent.DATA_CREATE,popupCreateView);
+            	//For Delete
+            	categoryTable.addEventListener(ActionTableEvent.DATA_DELETE,executeDelete);
+				
+				//For Create, Modify, Delete
+				commonObject.addEventListener(FaultEvent.FAULT,onFault);
+				commonObject.addEventListener(ResultEvent.RESULT,onSuccess);
+				
+				//For Query
+				commonObjectQuery.addEventListener(ResultEvent.RESULT,onCategoryFetch);
+            	commonObjectQuery.addEventListener(FaultEvent.FAULT,onCategoryFault);
+            	
+			}
+			
+			//////////////////////////////////////////////////////
+			////
+			//// Event Handlers
+			//// 
+			//////////////////////////////////////////////////////			
+			private function onItemSelected(event:ListEvent):void{
+				trace("Item Selected");
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Query Handlers
+			//////////////////////////////////////////////////////		
+            private function popupQueryView(event:ActionTableEvent):void{
+            	if(queryForm == null){
+					queryForm = new CategoryQueryDialog();
+				}else{
+					queryForm.reset();
+				}
+				PopUpManager.addPopUp(queryForm as IFlexDisplayObject, this as DisplayObject, true);
+				PopUpManager.centerPopUp(queryForm);
+				queryForm.queryButton.addEventListener(FlexEvent.BUTTON_DOWN,onQuery);
+				queryForm.closeBtn.addEventListener(FlexEvent.BUTTON_DOWN,onQueryClose);
+            }
+            
+            private function onQuery(event:FlexEvent):void {
+            	categoryTable.submitQueryCondition(queryForm.categoryNameInput.text);
+            }
+            
+            private function onQueryClose(event:FlexEvent):void {
+            	PopUpManager.removePopUp(queryForm);
+            }
+            
+            private function executeQuery(event:ActionTableEvent):void{
+            	var condition:Object = event.getQueryCondition();
+            	if(condition is String && String(condition).length > 0){
+            		commonObjectQuery.findCategory(String(condition));
+            	}else{
+            		commonObjectQuery.findCategory();
+            	}            	
+            	PopUpManager.removePopUp(queryForm);
+            }
+            
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Create Handlers
+			//////////////////////////////////////////////////////	
+            private function popupCreateView(event:ActionTableEvent):void{
+            	if(createForm == null){
+            		createForm = new CategoryCreateDialog();
+            	}else{
+            		createForm.reset();
+            	}
+            	PopUpManager.addPopUp(createForm as IFlexDisplayObject, this as DisplayObject, true);
+				PopUpManager.centerPopUp(createForm);
+				createForm.createButton.addEventListener(FlexEvent.BUTTON_DOWN,onCreate);
+				createForm.closeBtn.addEventListener(FlexEvent.BUTTON_DOWN,onCreateClose);
+            }
+            
+            private function onCreate(event:FlexEvent):void{
+            	var newCategory:CategoryCTO = new CategoryCTO();
+            	newCategory.name = createForm.nameInput.text;
+            	newCategory.description = createForm.descriptionInput.text;
+            	
+            	resultToken = commonObject.createCategory(newCategory);
+            	lastRPCType = CREATE;
+				createForm.reset();
+            }
+            private function onCreateClose(event:FlexEvent):void{
+            	PopUpManager.removePopUp(createForm);
+            }
+            
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Delete Handlers
+			//////////////////////////////////////////////////////	
+            private function executeDelete(event:ActionTableEvent):void{
+            	trace(event.getDeletedData());
+            	var categories:Array = event.getDeletedData();
+            	if(categories == null || categories.length <= 0){
+            		return;
+            	}
+            	var task:Array = new Array();
+            	for(var i:int = 0; i < categories.length; i ++){
+            		task[i] = categories[i].id;
+            	}
+//				for(var i:int = 0; i < categories.length; i ++){
+//					task.addItem(CategoryQTO(categories[i]).id);
+//				}
+				
+            	resultToken = commonObject.removeCategory(task);
+            	lastRPCType = DELETE;
+            }
+            
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Update Handlers
+			//////////////////////////////////////////////////////	
+			private function popupModifyView(event:ActionTableEvent):void {
+				trace(event);
+			}
+			
+			private function executeUpdate(event:ActionTableEvent):void {
+				var modified:Array = event.getSubmitingData();
+				if(!modified || modified.length <= 0){
+					return;
+				}
+				var submitData:Array = new Array();
+				for(var i:int = 0; i < modified.length; i ++){
+					if(!modified[i]){
+						continue;
+					}
+					var uto:CategoryUTO = new CategoryUTO();
+					uto.id = modified[i].id;
+					uto.name = modified[i].name;
+					uto.description = modified[i].description;
+					submitData[submitData.length] = uto;
+				}
+				resultToken = commonObject.updateCategory(submitData);
+				lastRPCType = UPDATE;
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : RPC Handlers
+			//////////////////////////////////////////////////////	
+			private function onFault(event:FaultEvent):void {
+				trace(event);
+				Alert.show(event.fault.faultString, "Error");
+				initDataModel();
+			}
+			
+			private function initDataModel():void {
+            	commonObjectQuery.findCategory();
+            }      
+              
+			private function onSuccess(event:ResultEvent):void {
+				if((!resultToken)||(!resultToken.message)||(!resultToken.message.body)){
+					return;
+				}
+				var body:Array = resultToken.message.body as Array;
+				if(lastRPCType == CREATE){
+					if(null != resultToken.result){
+						resultToken = commonObjectQuery.findCategoryById(resultToken.result);
+						lastRPCType = QUERY;
+					} else {
+						lastRPCType = INVALID;
+					}
+				} else {
+					lastRPCType = INVALID;
+				}
+				lastRPCType = INVALID;
+			}
+			
+			private function onCategoryFetch(event:ResultEvent):void{
+				if (event.result is ArrayCollection) {
+				    categoryList = ArrayCollection(event.result).toArray();
+				    categoryTable.model = categoryList;
+				} else if (event.result is CategoryQTO) {
+					categoryTable.submitCreateData(event.result);
+				}
+			}
+			
+			private function onCategoryFault(event:FaultEvent):void{
+				Alert.show(event.fault.toString());
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Methods : Override Methods
+			//////////////////////////////////////////////////////	
+            public override function reset():void{
+            	categoryTable.reset();
+            }            
+		]]>
+	</mx:Script>
+	
+	
+	<mx:RemoteObject id="commonObjectQuery" destination="CommonObjectQuery"/>
+	<mx:RemoteObject id="commonObject" destination="CommonObject"/>
+	<mx:Panel width="100%" height="100%" layout="vertical" title="产品分类视图">
+		<components:ActionTable id="categoryTable"/>
+	</mx:Panel>
+</framework:ManagedView>

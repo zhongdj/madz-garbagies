@@ -1,0 +1,215 @@
+<project name="all" default="jar">
+
+	<!--Define property, path and taskdef-->
+	<property file="MADZ_BUILD/build.properties" />
+
+	<path id="build.classpath">
+	    <fileset dir="${3rd-party.home}">
+                <include name="**/*.jar" />
+            </fileset>
+            <fileset dir="${glassfish.home}/lib/sun-appserv-ant.jar;${glassfish.home}/lib/admin-cli.jar" />
+	</path>
+
+	<path id="glassfish.deploy.classpath">
+            <fileset dir="${glassfish.home}/lib">
+                <include name="sun-appserv-ant.jar" />
+                <include name="admin-cli.jar" />
+            </fileset>
+	</path>
+	
+       <target name="self-clean">
+	    <delete dir="${dist.home}" />
+            <mkdir dir="${dist.platform.home}" />
+	    <mkdir dir="${dist.modules.home}" />
+            <mkdir dir="${dist.applications.home}" />
+	</target>
+
+	<target name="clean">
+	    <ant dir="${platform.home}" target="clean" />
+	    <ant dir="${modules.home}" target="clean" />
+	    <ant dir="${applications.home}" target="clean" />
+	</target>
+
+	<target name="jar" depends="self-clean">
+	    <ant dir="${platform.home}" target="jar" />
+  	    <ant dir="${modules.home}" target="jar" />
+	    <ant dir="${applications.home}" target="jar" />
+	</target>
+     
+        <target name="copy-glassfish-lib" depends="jar">
+            <copy todir="${glassfish.home}/lib" overwrite="true">
+	         <fileset dir="${3rd-party.home}/madz-blazeds-glassfish" includes="*.jar" />
+                 <fileset dir="${dist.platform.home}" includes="madz-security-realm.jar" />
+	    </copy>
+        </target>
+
+        <target name="copy-domain-lib" depends="jar">
+            <copy todir="${glassfish.home}/domains/${domain.name}/lib" overwrite="true">
+                <fileset dir="${3rd-party.home}/dom4j" includes="*.jar" />
+                <fileset dir="${3rd-party.home}/mysql" includes="*.jar" />
+                <fileset dir="${dist.platform.home}" includes="message-bus.jar" />
+            </copy>
+            <copy todir="${glassfish.home}/domains/${domain.name}/lib/classes" overwrite="true">
+                <fileset dir="${platform.home}/MessageBus/src" includes="*.xml" />
+            </copy>
+        </target>
+
+        <target name="copy-security-config">
+            <copy todir="${glassfish.home}/domains/${domain.name}/config" overwrite="true" >
+                <fileset dir="${platform.home}/MadzLoginRealm/src/net/vicp/madz/security/properties" includes="*.properties" />
+            </copy>
+            <copy todir="${glassfish.home}/domains/${domain.name}/config" overwrite="true" >
+                <fileset dir="${3rd-party.home}/madz-blazeds-glassfish" includes="login.conf" />
+            </copy>
+            <copy todir="${glassfish.home}/domains/${domain.name}/config" overwrite="true">
+                <fileset dir="${3rd-party.home}/madz-blazeds-glassfish" includes="server.policy" />
+            </copy>
+        </target>
+
+        <target name="pre-resource-provisioning" depends="copy-glassfish-lib, copy-domain-lib, copy-security-config">
+        </target>
+
+
+	<target name="deploy-define">
+            <taskdef name="sun-appserv-deploy" classname="org.apache.tools.ant.taskdefs.optional.sun.appserv.DeployTask">
+                <classpath path="${glassfish.home}/lib/sun-appserv-ant.jar;${glassfish.home}/lib/admin-cli.jar" />
+            </taskdef>
+            <taskdef name="sun-appserv-undeploy" classname="org.apache.tools.ant.taskdefs.optional.sun.appserv.UndeployTask">
+                <classpath path="${glassfish.home}/lib/sun-appserv-ant.jar;${glassfish.home}/lib/admin-cli.jar" />
+            </taskdef>
+        </target>
+
+        <target name="as-ant-init">
+            <taskdef name="sun-appserv-deploy"
+                classname="org.apache.tools.ant.taskdefs.optional.sun.appserv.DeployTask" classpathref= "glassfish.deploy.classpath"/>
+            <taskdef name="sun-appserv-undeploy"
+                classname="org.apache.tools.ant.taskdefs.optional.sun.appserv.UndeployTask" classpathref= "glassfish.deploy.classpath"/>
+            <taskdef name="sun-appserv-component"
+                classname="org.apache.tools.ant.taskdefs.optional.sun.appserv.ComponentTask" classpathref= "glassfish.deploy.classpath"/>
+            <taskdef name="sun-appserv-admin"
+                classname="org.apache.tools.ant.taskdefs.optional.sun.appserv.AdminTask" classpathref= "glassfish.deploy.classpath"/>
+            <taskdef name="sun-appserv-jspc"
+                classname="org.apache.tools.ant.taskdefs.optional.sun.appserv.SunJspc" classpathref= "glassfish.deploy.classpath"/>
+            <taskdef name="sun-appserv-update"
+                classname="org.apache.tools.ant.taskdefs.optional.sun.appserv.UpdateTask" classpathref= "glassfish.deploy.classpath"/>
+            <taskdef name="sun-appserv-instance"
+                classname="org.apache.tools.ant.taskdefs.optional.sun.appserv.InstanceTask" classpathref= "glassfish.deploy.classpath"/>
+            <taskdef name="wsgen" classname="com.sun.tools.ws.ant.WsGen" classpathref= "glassfish.deploy.classpath"/>
+            <taskdef name="wsimport" classname="com.sun.tools.ws.ant.WsImport" classpathref= "glassfish.deploy.classpath"/>
+        </target>
+
+        <target name="create-jdbc-pool" depends="as-ant-init">
+            <sun-appserv-admin asinstalldir="${glassfish.home}" 
+                user="admin" 
+                passwordfile="${password.file}"
+                explicitcommand="create-jdbc-connection-pool --user admin --passwordfile ${password.file} --datasourceclassname com.mysql.jdbc.jdbc2.optional.MysqlXADataSource --target server --restype javax.sql.XADataSource --steadypoolsize 8 --maxpoolsize 32 --poolresize 2 --maxwait 60000 --idletimeout 300 --isolationlevel read-committed  --isconnectvalidatereq=true --validationmethod meta-data --validationtable crmp_user --failconnection=true --nontransactionalconnections=false --allownoncomponentcallers=false    --property User=root:Password=1q2w3e4r5t:UseUnicode=true:Encoding=GBK:CharacterEncoding=GBK:ServerName=localhost:Port=3306:DatabaseName=crmp crmppool" />
+        </target>
+
+        <target name="create-jdbc-resource" depends="create-jdbc-pool">
+            <sun-appserv-admin asinstalldir="${glassfish.home}"
+                user="admin"
+                passwordfile="${password.file}"
+                explicitcommand="create-jdbc-resource --connectionpoolid crmppool --user admin --passwordfile ${password.file} jdbc/crmp" />
+        </target>
+
+        <target name="create-jms-dest" depends="as-ant-init">
+            <sun-appserv-admin asinstalldir="${glassfish.home}"
+                user="admin"
+                passwordfile="${password.file}"
+                explicitcommand="create-jmsdest --user admin --passwordfile ${password.file} --host localhost --port ${admin.port} --desttype queue --property User=guest:Password=guest SystemEventQueue" />
+        </target> 
+
+        <target name="create-jms-resources" depends="create-jms-dest">
+            <sun-appserv-admin asinstalldir="${glassfish.home}"
+                user="admin"
+                passwordfile="${password.file}"
+                explicitcommand="create-jms-resource --user admin --passwordfile ${password.file} --restype javax.jms.Queue --property Name=SystemEventQueue jms/SystemEventQueue" />
+
+            <sun-appserv-admin asinstalldir="${glassfish.home}"
+                user="admin"
+                passwordfile="${password.file}"
+                explicitcommand="create-jms-resource --restype javax.jms.QueueConnectionFactory jms/SystemEventQueueFactory" />
+        </target>
+
+        <target name="create-madz-auth-realm" depends="as-ant-init">
+            <sun-appserv-admin asinstalldir="${glassfish.home}"
+                user="admin"
+                passwordfile="${password.file}"
+                explicitcommand="create-auth-realm --user admin --passwordfile ${password.file} --classname net.vicp.madz.appserv.security.MadzRealm --property jaas-context=MadzRealm MadzRealm" />
+            <sun-appserv-admin asinstalldir="${glassfish.home}"
+                user="admin"
+                passwordfile="${password.file}"
+                explicitcommand="create-jvm-options --user admin --passwordfile ${password.file}  -Djava.security.manager"/>
+            <sun-appserv-admin asinstalldir="${glassfish.home}"
+                user="admin"
+                passwordfile="${password.file}"
+                explicitcommand="set --user admin --passwordfile ${password.file} ${target.server}.security-service.default-realm=MadzRealm" />
+        </target>
+
+        <target name="configure-iiop-listener" depends="as-ant-init">
+            <sun-appserv-admin asinstalldir="${glassfish.home}"
+                user="admin"
+                passwordfile="${password.file}"
+                explicitcommand="set --user admin --passwordfile ${password.file} ${target.server}.iiop-service.iiop-listener.orb-listener-1.address=${iiop-listener-ip}" />
+        </target>
+
+        <target name="configure-server" depends="create-jdbc-resource, create-jms-resources, create-madz-auth-realm, configure-iiop-listener" />
+
+        <target name="start-glassfish">
+            <exec executable="${glassfish.home}/bin/asadmin">
+                <arg line="start-domain" />
+                <arg line="--user" />
+                <arg line="admin" />
+                <arg line="--passwordfile" />
+                <arg line="${password.file}" /> 
+                <arg line="${domain.name}" /> 
+            </exec>
+        </target>        
+
+        
+        <target name="stop-glassfish">
+            <exec executable="${glassfish.home}/bin/asadmin">
+                <arg line="stop-domain" />
+                <arg line="${domain.name}" />  
+            </exec>
+        </target>        
+
+        
+        <target name="restart-glassfish" depends="stop-glassfish, start-glassfish" />
+
+        <target name="install" depends="pre-resource-provisioning, start-glassfish, configure-server, restart-glassfish" />
+
+        <target name="delete-domain" depends="stop-glassfish">
+            <exec executable="${glassfish.home}/bin/asadmin">
+                <arg line="delete-domain" />
+                <arg line="${domain.name}" />  
+            </exec>
+        </target>
+        
+        <target name="create-domain" >
+            <exec executable="${glassfish.home}/bin/asadmin">
+                <arg line="create-domain" />
+                <arg line="--user" />
+                <arg line="admin" />
+                <arg line="--passwordfile" />
+                <arg line="${password.file}" /> 
+                <arg line="--adminport" /> 
+                <arg line="${admin.port}" /> 
+                <arg line="--profile" /> 
+                <arg line="cluster" /> 
+                <arg line="--savemasterpassword" /> 
+                <arg line="--echo=true" /> 
+                <arg line="--savelogin=true" /> 
+                <arg line="--instanceport" /> 
+                <arg line="${instance.port}" /> 
+                <arg line="${domain.name}" />  
+            </exec>
+        </target>
+
+	<target name="deploy">
+	     <sun-appserv-deploy file="${dist.applications.home}/crmp.ear" name="crmp" force="true" precompilejsp="false" verify="false" upload="true" user="admin" passwordfile="pass" host="localhost" port="${admin.port}" asinstalldir="${glassfish.home}" />
+        </target>
+
+       <target name="reinstall" depends="stop-glassfish, delete-domain, create-domain, install, deploy" /> 
+</project>
+

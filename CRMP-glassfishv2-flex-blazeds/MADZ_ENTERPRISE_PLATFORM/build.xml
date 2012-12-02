@@ -1,0 +1,37 @@
+<project name="PLATFORM_MODULES" default="jar">
+	<property file="./Build/build.properties" />
+
+
+	<target name="delete-dist">
+		<ant dir="${tobinding.home}" target="delete-dist" />
+		<ant dir="${state-machine.home}" target="delete-dist" />
+		<ant dir="${message-bus.home}" target="delete-dist" />
+		<ant dir="${madz-security-realm.home}" target="delete-dist" />
+		<ant dir="${biz-core.home}" target="delete-dist" />
+	</target>
+
+	<target name="clean">
+		<ant dir="${tobinding.home}" target="clean" />
+		<ant dir="${state-machine.home}" target="clean" />
+		<ant dir="${message-bus.home}" target="clean" />
+		<ant dir="${madz-security-realm.home}" target="clean" />
+		<ant dir="${biz-core.home}" target="clean" />
+	</target>
+	
+	<target name="jar">
+		<ant dir="${tobinding.home}" target="jar" />
+		<ant dir="${state-machine.home}" target="jar" />
+		<ant dir="${message-bus.home}" target="jar" />
+		<ant dir="${madz-security-realm.home}" target="jar" />
+		<ant dir="${biz-core.home}" target="jar" />
+	</target>
+
+	<target name="report">
+		<ant dir="${tobinding.home}" target="report" />
+		<ant dir="${state-machine.home}" target="report" />
+		<ant dir="${message-bus.home}" target="report" />
+		<ant dir="${madz-security-realm.home}" target="report" />
+		<ant dir="${biz-core.home}" target="report" />
+	</target>
+</project>
+

@@ -1,0 +1,4 @@
+#!/bin/bash
+
+/Users/barry/Professionals/Runtimes/glassfish/bin/asadmin start-domain
+

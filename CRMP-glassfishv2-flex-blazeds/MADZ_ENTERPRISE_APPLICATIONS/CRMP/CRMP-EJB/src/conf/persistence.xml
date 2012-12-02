@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence version="1.0"
+	xmlns="http://java.sun.com/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_1_0.xsd">
+	<persistence-unit name="CRMPBiz-ejbPU"
+		transaction-type="JTA">
+		<provider>oracle.toplink.essentials.PersistenceProvider</provider>
+		<jta-data-source>jdbc/crmp</jta-data-source>
+
+		<!-- Infrastructure -->
+		<class>net.madz.infra.logging.entity.OperationLog</class>
+		<class>net.madz.infra.security.persistence.User</class>
+		<class>net.madz.infra.security.persistence.Tenant</class>
+		<class>net.madz.infra.security.persistence.UserGroup</class>
+		<class>net.madz.infra.security.persistence.MenuItem</class>
+		<class>net.madz.infra.security.persistence.Role</class>
+		<class>net.madz.infra.security.logging.entity.TenantOperationLog</class>
+
+		<!-- Common Module -->
+		<class>net.madz.module.common.entity.Address</class>
+	    <class>net.madz.module.common.entity.City</class>
+		<class>net.madz.module.common.entity.District</class>
+		<class>net.madz.module.common.entity.Merchandise</class>
+		<class>net.madz.module.common.entity.Province</class>
+		<class>net.madz.module.common.entity.Street</class>
+		<class>net.madz.module.common.entity.UnitOfMeasure</class>
+		<class>net.madz.module.common.entity.ZipCode</class>
+
+		<!-- Account Module -->
+		<class>net.madz.module.account.entity.Account</class>
+		<class>net.madz.module.account.entity.Contact</class>
+
+		<!-- Billing Module -->
+		<class>net.madz.module.billing.entity.ARTransaction</class>
+		<class>net.madz.module.billing.entity.AdjustmentInvoice</class>
+		<class>net.madz.module.billing.entity.InvoiceItem</class>
+		<class>net.madz.module.billing.entity.InvoiceBO</class>
+		<class>net.madz.module.billing.entity.PaymentInvoice</class>
+
+		<!-- Contract Module -->
+		<class>net.madz.module.contract.entity.UnitOfProject</class>
+		<class>net.madz.module.contract.entity.ConstructionPart</class>
+		<class>net.madz.module.contract.entity.Project</class>
+		<class>net.madz.module.contract.entity.ContractBO</class>
+
+		<!-- Unknown Module -->
+		<class>net.madz.module.unknown.entity.ARPayment</class>
+		<class>net.madz.module.unknown.entity.Adjustment</class>
+		<class>net.madz.module.unknown.entity.Amendment</class>
+		<class>net.madz.module.unknown.entity.AmendmentItem</class>
+		<class>net.madz.module.contract.entity.ContractRatePlanComponent</class>
+		<class>net.madz.module.unknown.entity.PaymentMethod</class>
+		<class>net.madz.module.unknown.entity.Refund</class>
+		<class>net.madz.module.unknown.entity.RefundPayment</class>
+		<class>net.madz.module.unknown.entity.RefundPaymentInvoice</class>
+		<class>net.madz.module.unknown.entity.StateChangeLog</class>
+
+
+		<!-- Production Module -->
+		<class>net.madz.module.production.entity.ConcreteMixingPlant</class>
+		<class>net.madz.module.production.entity.ProductionRecordBO</class>
+
+
+		<!-- ETL Service -->
+		<class>net.madz.service.etl.entity.DatabaseDescriptor</class>
+		<class>net.madz.service.etl.entity.TableDescriptor</class>
+		<class>net.madz.service.etl.entity.ColumnDescriptor</class>
+		<class>net.madz.service.etl.entity.DatabaseImportIndicator</class>
+		<class>net.madz.service.etl.entity.DatabaseSyncIndicator</class>
+		<class>net.madz.service.etl.entity.ETLColumnContentMappingDescriptor</class>
+		<class>net.madz.service.etl.entity.ETLColumnDescriptor</class>
+		<class>net.madz.service.etl.entity.ETLTableDescriptor</class>
+		<exclude-unlisted-classes>false</exclude-unlisted-classes>
+		<properties>
+			<property name="toplink.ddl-generation" value="create-tables" />
+			<!-- <property name="toplink.ddl-generation" value="drop-and-create-tables" 
+				/> -->
+		</properties>
+	</persistence-unit>
+</persistence>

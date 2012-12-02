@@ -1,0 +1,40 @@
+<project name="JShop-Intergration" default="jar">
+	<property name="root.dir" value="../../../" />
+	<property file="Build/build.properties" />
+
+	<target name="self-clean">
+		<delete dir="Build/dist" quiet="true" />
+		<mkdir dir="Build/dist/lib" />
+		<mkdir dir="Build/dist/comp" />
+	</target>
+
+	<target name="delete-dist">
+		<ant dir="${crmp-ejb.home}" target="delete-dist" />
+		<ant dir="${crmp-client.home}" target="delete-dist" />
+		<ant dir="${crmp-war.home}" target="delete-dist" />
+		<ant dir="${crmp-system.home}" target="delete-dist" />
+	</target>
+
+	<target name="clean" depends="self-clean">
+		<ant dir="${crmp-ejb.home}" target="clean" />
+		<ant dir="${crmp-client.home}" target="clean" />
+		<ant dir="${crmp-war.home}" target="clean" />
+		<ant dir="${crmp-system.home}" target="clean" />
+	</target>
+
+	<target name="jar" depends="clean">
+		<ant dir="${crmp-ejb.home}" target="jar" />
+		<ant dir="${crmp-client.home}" target="jar" />
+		<ant dir="${crmp-war.home}" target="jar" />
+		<ant dir="${crmp-system.home}" target="jar" />
+	</target>
+
+	<target name="report">
+		<ant dir="${crmp-ejb.home}" target="report" />
+		<ant dir="${crmp-client.home}" target="report" />
+		<ant dir="${crmp-war.home}" target="report" />
+		<ant dir="${crmp-system.home}" target="report" />
+	</target>
+
+</project>
+

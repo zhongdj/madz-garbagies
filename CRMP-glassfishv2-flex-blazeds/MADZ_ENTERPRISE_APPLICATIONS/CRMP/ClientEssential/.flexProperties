@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<flexProperties enableServiceManager="false" flexServerFeatures="4" flexServerType="2" serverContextRoot="/apps" serverRoot="Z:/crmp/crmp-web_war" serverRootURL="http://192.168.1.103:8080/apps" toolCompile="true" useServerFlexSDK="false" version="1"/>

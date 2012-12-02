@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+	<Endpoints>
+		<ServiceEndpoint name="JMS_Server_1">
+			<!-- <Property name="java.naming.factory.initial" value="com.sun.appserv.naming.S1ASCtxFactory"/> 
+				<Property name="java.naming.provider.url" value="iiop://localhost:3700"/> 
+				<Property name="org.omg.CORBA.ORBInitialHost" value="localhost"/> <Property 
+				name="org.omg.CORBA.ORBInitialPort" value="3700"/> <Property name="com.sun.appserv.iiop.endpoints" 
+				value="localhost:3700"/> -->
+		</ServiceEndpoint>
+	</Endpoints>
+	<ConnectionFactories>
+		<ConnectionFactory name="jms/SystemEventQueueFactory"
+			type="Queue" ServiceProvider="JMS_Server_1" username="guest"
+			password="guest" />
+	</ConnectionFactories>
+	<Destinations>
+		<Destination name="jms/SystemEventQueue" type="Queue"
+			connectionFactory="jms/SystemEventQueueFactory" />
+	</Destinations>
+	<MessageConfig>
+		<!--Configuration Management Messages Starts -->
+		<Message type="net.vicp.madz.infra.service.event.ApplicationServiceEvent">
+			<MessageType type="Object" />
+			<Destinations>
+				<Destination name="jms/SystemEventQueue" />
+			</Destinations>
+		</Message>
+		<Message
+			type="net.vicp.madz.infra.security.messaging.event.outbound.TenantLogEvent">
+			<MessageType type="Object" />
+			<Destinations>
+				<Destination name="jms/SystemEventQueue" />
+			</Destinations>
+		</Message>
+		<!--Security Management Messages Ends -->
+	</MessageConfig>
+</config>

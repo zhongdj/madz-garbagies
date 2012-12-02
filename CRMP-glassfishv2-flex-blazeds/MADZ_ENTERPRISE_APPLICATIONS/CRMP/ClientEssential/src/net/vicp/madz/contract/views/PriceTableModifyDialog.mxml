@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="434" height="224" title="编辑商品合约价格" creationComplete="onCreateComplete(event);" fontSize="16">
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.ArrayCollection;
+			import mx.events.FlexEvent;
+			import mx.events.ListEvent;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			import net.vicp.madz.biz.common.vo.MerchandiseQTO;
+			import net.vicp.madz.contract.vo.ContractRatePlanComponentTO;
+			import net.vicp.madz.utils.SelectUtils;
+			
+			private var contractRatePlanComponent : ContractRatePlanComponentTO;
+			private var merchandises : ArrayCollection;
+			
+			
+			public function setRatePlanComponent(component:ContractRatePlanComponentTO) : void {
+				this.contractRatePlanComponent = component;
+				load();
+			}
+
+			public function reset():void{
+				updateButton.enabled = false;
+				updateAndCloseButton.enabled = false;
+			}
+			
+			private function onCreateComplete(event:FlexEvent) : void {
+				commonObjectQuery.addEventListener(ResultEvent.RESULT,onFetch);
+				commonObjectQuery.addEventListener(FaultEvent.FAULT,onFault);
+				commonObjectQuery.findMerchandise();
+				load();
+				validate();
+			}
+			
+			private function onFetch(event:ResultEvent) : void {
+				merchandises = ArrayCollection(event.result);
+				load();
+			}
+			
+			private function onFault(event:FaultEvent) : void {
+			}
+			
+			private function validate() : void {
+			}
+
+			private function onSelectChange(event:ListEvent) : void {
+				if (null == merchandiseComboBox.selectedItem || null == merchandiseComboBox.selectedItem) {
+					uomNameLabel.text = "计量单位";
+					return;
+				}
+				var selectedMerchandise:MerchandiseQTO = MerchandiseQTO(merchandiseComboBox.selectedItem);
+				uomNameLabel.text = selectedMerchandise.unitOfMeasureName;
+			}
+			
+			private function load():void
+			{
+				if (null == this.contractRatePlanComponent) {
+					return;
+				}
+				if (null != merchandiseComboBox && null != merchandises) {
+					merchandiseComboBox.dataProvider = merchandises.toArray();
+					SelectUtils.getSelectedItem(this.contractRatePlanComponent.merchandise.unitOfMeasureName, merchandises.toArray());
+					if (null != uomNameLabel && null != merchandiseComboBox.selectedItem) {
+						uomNameLabel.text = merchandiseComboBox.selectedItem["unitOfMeasureName"];
+					}
+				}
+				
+				if (null != chargeRateInput) {
+					chargeRateInput.text = this.contractRatePlanComponent.chargeRate + "";
+				}
+				
+			}
+			
+		]]>
+	</mx:Script>
+	
+	<mx:Label x="30" y="34" text="商品：" width="76" fontWeight="bold" textAlign="right" height="25"/>
+	<mx:Label x="19" y="71" text="合约价格：" width="91" fontWeight="bold" textAlign="right" height="25"/>
+	
+	<mx:Button id="updateButton" x="70" y="139" width="66" label="更新" fontSize="14" tabIndex="7"/>
+	<mx:Button id="closeBtn" x="285" y="139" width="66" label="关闭" fontSize="14" tabIndex="8"/>
+	
+	<mx:RemoteObject id="commonObjectQuery" destination="CommonObjectQuery"/>
+	<mx:Button id="updateAndCloseButton" x="152" y="139" width="119" label="更新并关闭" fontSize="14"
+			   tabIndex="7"/>
+	<mx:ComboBox id="merchandiseComboBox" x="114" y="34" width="267" editable="true" change="onSelectChange(event)" labelField="name"></mx:ComboBox>
+	<mx:TextInput id="chargeRateInput" x="114" y="71" width="157"/>
+	<mx:Label width="20" height="28" horizontalCenter="84" text="每" textAlign="center"
+			  verticalCenter="-5"/>
+	<mx:Label id="uomNameLabel" width="80" height="28" horizontalCenter="133" text="计量单位"
+			  textAlign="center" verticalCenter="-5"/>
+</mx:Panel>

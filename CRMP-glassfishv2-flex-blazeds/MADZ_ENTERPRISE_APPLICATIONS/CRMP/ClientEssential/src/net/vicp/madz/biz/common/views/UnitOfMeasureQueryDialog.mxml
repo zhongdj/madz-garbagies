@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="256" height="170" title="查询条件设定窗口" fontSize="16">
+		<mx:Script>
+			<![CDATA[
+				public function reset():void{
+					deletedCheckBox.selected = false;
+				}
+			]]>
+		</mx:Script>
+		<mx:Button x="10" y="86" label="查询" width="95" id="queryButton"/>
+		<mx:Button x="133.5" y="86" label="关闭" width="93" id="closeBtn"/>
+		<mx:CheckBox x="80" y="37" label="已删除" id="deletedCheckBox"/>
+	
+</mx:Panel>

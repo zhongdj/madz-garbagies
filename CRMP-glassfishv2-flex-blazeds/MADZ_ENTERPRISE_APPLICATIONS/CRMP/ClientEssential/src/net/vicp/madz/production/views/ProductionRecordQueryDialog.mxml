@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml"
+		  width="720" height="350" creationComplete="onCreateComplete(event);" fontSize="12"
+		  layout="absolute" title="查询生产记录">
+	
+	
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.ArrayCollection;
+			import mx.collections.ArrayList;
+			import mx.events.FlexEvent;
+			import mx.events.ListEvent;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			import net.vicp.madz.production.vo.*;
+			
+			private var productionRecord :ProductionRecordTO;
+			
+			public function setProductionRecord(item:ProductionRecordTO) : void {
+				if (null == item) {
+					return;
+				}
+				
+				this.productionRecord = item;
+				
+				idInput.text = item.id;
+				productionTimeDateField.selectedDate = item.productionTime;
+				outputVolumnInput.text = item.quantity + "";
+				truckNumberInput.text = item.truckNumber;
+				referenceNumberInput.text = item.referenceNumber;
+				billedCheckBox.selected = item.billed;
+				
+				//TODO uomComboBox, unitOfProjectComboBox,unitOfProjectOwnerComboBox,
+				//TODO projectOwnerComboBox,plantComboBox
+			}
+			
+			public function reset():void{
+				
+				productionRecord = null;
+			}
+			
+			public function onCreateComplete(event:FlexEvent):void {
+				
+			}
+			
+			private function onFetch(event:ResultEvent) : void {
+			}
+			
+		]]>
+	</mx:Script>
+	
+	<mx:Label id="idLabel" x="6" y="13" width="89" fontWeight="bold" text="标识:" textAlign="right"/>
+	<mx:TextInput id="idInput" x="103" y="11" width="211" editable="false"/>
+
+	<mx:Label id="productionTimeLabel" x="7" y="49" width="89" fontWeight="bold" text="生产时间:" textAlign="right"/>
+	<mx:DateField id="productionTimeDateField" x="103" y="47" width="211" height="29"/>
+	
+	<mx:Label id="outputVolumnLabel" x="6" y="87" width="89" fontWeight="bold" text="输出量:" textAlign="right"/>
+	<mx:TextInput id="outputVolumnInput" x="103" y="85" width="211" editable="true"/>
+	
+	<mx:Label id="truckNumberLabel" x="6" y="162" width="89" fontWeight="bold" text="卡车号码:" textAlign="right"/>
+	<mx:TextInput id="truckNumberInput" x="103" y="160" width="211" editable="true"/>
+	
+	<mx:Label id="uomLabel" x="6" y="125" width="89" fontWeight="bold" text="计量单位:" textAlign="right"/>
+	<mx:ComboBox id="uomComboBox" x="103" y="123" width="211" editable="false"></mx:ComboBox>
+	
+	<mx:Label id="unitOfProjectLabel" x="353" y="12" width="89" fontWeight="bold" text="单位工程:" textAlign="right"/>
+	<mx:ComboBox id="unitOfProjectComboBox" x="450" y="10" width="211" editable="false"></mx:ComboBox>
+	
+	<mx:Label id="unitOfProjectOwnerLabel" x="353" y="50" width="89" fontWeight="bold" text="施工单位:" textAlign="right"/>
+	<mx:ComboBox id="unitOfProjectOwnerComboBox" x="450" y="48" width="211" editable="false"></mx:ComboBox>
+	
+	<mx:Label id="projectOwnerLabel" x="353" y="123" width="89" fontWeight="bold" text="工程单位:" textAlign="right"/>
+	<mx:ComboBox id="projectOwnerComboBox" x="450" y="121" width="211" editable="false"></mx:ComboBox>
+	
+	<mx:Label id="plantLabel" x="353" y="162" width="89" fontWeight="bold" text="搅拌站名称:" textAlign="right"/>
+	<mx:ComboBox id="plantComboBox" x="450" y="160" width="211" editable="false"></mx:ComboBox>
+	
+	<mx:Label id="partLabel" x="353" y="202" width="89" fontWeight="bold" text="浇筑部位:" textAlign="right"/>
+	<mx:ComboBox id="partComboBox" x="450" y="200" width="211" editable="false"></mx:ComboBox>
+	
+	<mx:Label id="projectLabel" x="353" y="86" width="89" fontWeight="bold" text="工程名称:" textAlign="right"/>
+	<mx:ComboBox id="projectComboBox" x="450" y="86" width="211" editable="false"></mx:ComboBox>
+	
+	<mx:Label id="referenceNumberLabel" x="6" y="202" width="89" fontWeight="bold" text="参考号码:" textAlign="right"/>
+	<mx:TextInput id="referenceNumberInput" x="103" y="200" width="211" editable="true"/>
+
+	<mx:CheckBox id="billedCheckBox" x="26" y="236" label="已生成账单" enabled="false"/>
+	
+	<mx:Button id="queryButton" x="455" y="274" width="95" label="查询"/>
+	<mx:Button id="closeButton" x="568" y="274" width="93" label="关闭"/>
+	
+	<mx:RemoteObject id="server" destination="Account"/>
+</mx:Panel>

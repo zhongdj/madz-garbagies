@@ -1,0 +1,454 @@
+<?xml version="1.0" encoding="utf-8"?>
+<framework:ManagedView xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:components="net.vicp.madz.components.*"
+					   xmlns:framework="net.vicp.madz.framework.views.*" layout="vertical" width="100%" height="100%"  creationComplete="init();">
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.*;
+			import mx.controls.Alert;
+			import mx.controls.dataGridClasses.DataGridColumn;
+			import mx.core.IFlexDisplayObject;
+			import mx.events.FlexEvent;
+			import mx.events.ListEvent;
+			import mx.managers.PopUpManager;
+			import mx.rpc.AsyncToken;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			import net.vicp.madz.account.vo.AccountTO;
+			import net.vicp.madz.biz.common.vo.UnitOfMeasureQTO;
+			import net.vicp.madz.components.events.ActionTableEvent;
+			import net.vicp.madz.components.renderer.DateRendererFactory;
+			import net.vicp.madz.contract.vo.ContractTO;
+			
+			//////////////////////////////////////////////////////
+			////
+			//// Fields 
+			////
+			//////////////////////////////////////////////////////
+			private static const INVALID:int = -1;
+			private static const QUERY:int = 0;
+			private static const CREATE:int = 1;
+			private static const UPDATE:int = 2;
+			private static const DELETE:int = 3;
+			
+			private var createForm:ContractCreateDialog;
+			private var updateForm:ContractModifyDialog;
+			
+			[Bindable]
+			public var dataList:Array;
+			[Bindable]
+			private var columnProvider:Array;
+			private var resultToken:AsyncToken;
+			private var lastRPCType:int;
+			//////////////////////////////////////////////////////
+			////
+			//// Methods 
+			//// 
+			//////////////////////////////////////////////////////
+			
+			//////////////////////////////////////////////////////
+			//// Methods : initialize 
+			//////////////////////////////////////////////////////
+			private function init():void{
+				initDataTable();
+				initListeners();
+			}
+			
+			private function initDataTable():void {
+				columnProvider = new Array();
+				
+				var col:DataGridColumn = new DataGridColumn("name");
+				col.headerText="名称";
+				col.width = 120;
+				col.dataField="name";
+				columnProvider.push(col);       
+				
+				col = new DataGridColumn("state");
+				col.headerText="状态";
+				col.dataField="state";
+				col.editable = false;
+				columnProvider.push(col);   
+				
+				
+				col = new DataGridColumn("effectiveStartDate");
+				col.headerText="生效日期";
+				col.dataField="effectiveStartDate";
+				col.editable = false;
+				col.itemRenderer = new DateRendererFactory("effectiveStartDate");
+				columnProvider.push(col); 
+				
+				col = new DataGridColumn("effectiveEndDate");
+				col.headerText="终止日期";
+				col.dataField="effectiveEndDate";
+				col.editable = false;
+				col.itemRenderer = new DateRendererFactory("effectiveEndDate");
+				columnProvider.push(col); 
+				
+				col = new DataGridColumn("paymentTerm");
+				col.headerText="支付条件";
+				col.dataField="paymentTerm";
+				col.editable = false;
+				columnProvider.push(col); 
+				
+				col = new DataGridColumn("billVolumnBaseline");
+				col.headerText="按量支付标准";
+				col.dataField="billVolumnBaseline";
+				col.editable = false;
+				columnProvider.push(col);       
+				
+				col = new DataGridColumn("billPeriodBaseline");
+				col.headerText="按期支付标准";
+				col.dataField="billPeriodBaseline";
+				col.editable = false;
+				columnProvider.push(col);   
+				
+				
+				col = new DataGridColumn("billPeriodBaselineUnit");
+				col.headerText="按期支付单位";
+				col.dataField="billPeriodBaselineUnit";
+				col.editable = false;
+				columnProvider.push(col);   
+				
+				col = new DataGridColumn("billToAccount");
+				col.headerText="收票方";
+				col.dataField="billToAccount.name";
+				col.editable = false;
+				columnProvider.push(col);   
+				
+				col = new DataGridColumn("soldToAccount");
+				col.headerText="售达方";
+				col.dataField="soldToAccount.name";
+				col.editable = false;
+				columnProvider.push(col);  
+				
+				col = new DataGridColumn("shipToAccount");
+				col.headerText="收货方";
+				col.dataField="shipToAccount.name";
+				col.editable = false;
+				columnProvider.push(col);  
+				
+				col = new DataGridColumn("payerAccount");
+				col.headerText="付款方";
+				col.dataField="payerAccount.name";
+				col.editable = false;
+				columnProvider.push(col);   
+				
+				dataTable.columnProvider = columnProvider;
+			}
+			
+			
+			private function initListeners():void {
+				dataTable.addEventListener(ListEvent.ITEM_CLICK,onItemSelected);
+				//For Query
+				dataTable.addEventListener(ActionTableEvent.REQUEST_DATA_QUERY,executeQuery);
+				dataTable.addEventListener(ActionTableEvent.SUBMIT_QUERY_CONDITION,executeQuery);
+				//For Modify
+				dataTable.addEventListener(ActionTableEvent.REQUEST_DATA_MODIFY,popupModifyView);
+				dataTable.addEventListener(ActionTableEvent.DATA_MODIFY_SUBMIT,executeUpdate);
+				//For Create
+				dataTable.addEventListener(ActionTableEvent.DATA_CREATE,popupCreateView);
+				//For Delete
+				dataTable.addEventListener(ActionTableEvent.DATA_DELETE,executeDelete);
+				
+				//For Create, Modify, Delete
+				contractServer.addEventListener(FaultEvent.FAULT,onFault);
+				contractServer.addEventListener(ResultEvent.RESULT,onSuccess);
+				
+				//For Query
+				contractQueryServer.addEventListener(ResultEvent.RESULT,onDataFetch);
+				contractQueryServer.addEventListener(FaultEvent.FAULT,onDataFetchFault);
+				
+			}
+			
+			//////////////////////////////////////////////////////
+			////
+			//// Event Handlers
+			//// 
+			//////////////////////////////////////////////////////			
+			private function onItemSelected(event:ListEvent):void{
+				trace("Item Selected");
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Query Handlers
+			//////////////////////////////////////////////////////		
+			private function executeQuery(event:ActionTableEvent):void{
+				contractQueryServer.findContracts();
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Create Handlers
+			//////////////////////////////////////////////////////	
+			private function popupCreateView(event:ActionTableEvent):void{
+				if(createForm == null){
+					createForm = new ContractCreateDialog();
+				}else{
+					createForm.reset();
+				}
+				PopUpManager.addPopUp(createForm as IFlexDisplayObject, this as DisplayObject, true);
+				PopUpManager.centerPopUp(createForm);
+				createForm.createButton.addEventListener(FlexEvent.BUTTON_DOWN,onCreate);
+				createForm.createAndCloseButton.addEventListener(FlexEvent.BUTTON_DOWN,onCreateAndClose);
+				createForm.closeBtn.addEventListener(FlexEvent.BUTTON_DOWN,onCreateClose);
+			}
+			
+			private function onCreate(event:FlexEvent):void{
+				createData();
+			}
+			private function onCreateAndClose(event:FlexEvent):void{
+				createData();
+				PopUpManager.removePopUp(createForm);
+			}
+			
+			private function onCreateClose(event:FlexEvent):void{
+				PopUpManager.removePopUp(createForm);
+			}
+			
+			private function createData() : void {
+				var newTO:ContractTO = new ContractTO();
+				newTO.name = this.createForm.nameInput.text;
+				newTO.billPeriodBaseline = int(this.createForm.periodBaseLineInput.text);
+				const periodIndex : int = this.createForm.periodComboBox.selectedIndex;
+				switch(periodIndex) {
+					case 0:
+				        newTO.billPeriodBaselineUnit = "DAY";
+						break;
+					case 1:
+				        newTO.billPeriodBaselineUnit = "MONTH";
+						break;
+					case 2:
+				        newTO.billPeriodBaselineUnit = "YEAR";
+						break;
+					default:
+						newTO.billPeriodBaselineUnit = "UNSPECIFIED";
+						break;
+				}
+				
+				newTO.billVolumnBaseline = int(this.createForm.volumnBaseLineInput.text);
+				newTO.billVolumnBaselineUnitId = UnitOfMeasureQTO(this.createForm.uomComboxBox.selectedItem).id;
+				newTO.billVolumnBaselineUnitName = UnitOfMeasureQTO(this.createForm.uomComboxBox.selectedItem).name;
+				newTO.effectiveEndDate = this.createForm.endDateField.selectedDate;
+				newTO.effectiveStartDate = this.createForm.startDateField.selectedDate;
+				
+				const termIndex : int = this.createForm.paymentTermComboxBox.selectedIndex;
+				
+				switch(termIndex) {
+					case 0:
+						newTO.paymentTerm = "ON_RECEIPT";
+						break;
+					case 1:
+						newTO.paymentTerm = "NET7";
+						break;
+					case 2:
+						newTO.paymentTerm = "NET15";
+						break;
+					case 3:
+						newTO.paymentTerm = "NET30";
+						break;
+					case 4:
+						newTO.paymentTerm = "NET90";
+						break;
+					default:
+						newTO.paymentTerm = "UNSPECIFIED";
+						break;
+				}
+				
+				newTO.billToAccount = AccountTO(this.createForm.bill2AccountComboBox.selectedItem);
+				newTO.soldToAccount = AccountTO(this.createForm.sold2AccountComboBox.selectedItem);
+				newTO.shipToAccount = AccountTO(this.createForm.ship2AccountComboBox.selectedItem);
+				newTO.payerAccount = AccountTO(this.createForm.payerAccountComboBox.selectedItem);
+				
+                newTO.unitOfProjects = new ArrayCollection(this.createForm.unitOfProjectTable.model);
+				newTO.ratePlanComponents = new ArrayCollection(this.createForm.priceTable.model);
+				
+				//TODO
+				this.resultToken = contractServer.createContract(newTO);
+				this.lastRPCType = CREATE;
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Delete Handlers
+			//////////////////////////////////////////////////////	
+			private function executeDelete(event:ActionTableEvent):void{
+				trace(event.getDeletedData());
+				var uoms:Array = event.getDeletedData();
+				if(uoms == null || uoms.length <= 0){
+					return;
+				}
+				var task:Array = new Array(uoms.length);
+				for(var i:int = 0; i < uoms.length; i ++){
+					task[i] = uoms[i].id;
+				}
+				resultToken = contractServer.softDeleteContracts(task);
+				lastRPCType = DELETE;
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Update Handlers
+			//////////////////////////////////////////////////////	
+			private function popupModifyView(event:ActionTableEvent):void {
+				if (null == event.getRequestModifyData()) {
+					return ;
+				}
+				if(updateForm == null){
+					updateForm = new ContractModifyDialog();
+				}else{
+					updateForm.reset();
+				}
+				updateForm.setContract(event.getRequestModifyData() as ContractTO);
+				PopUpManager.addPopUp(updateForm as IFlexDisplayObject, this as DisplayObject, true);
+				PopUpManager.centerPopUp(updateForm);
+				updateForm.updateButton.addEventListener(FlexEvent.BUTTON_DOWN,onUpdate);
+				updateForm.updateAndCloseButton.addEventListener(FlexEvent.BUTTON_DOWN,onUpdateAndClose);
+				updateForm.closeBtn.addEventListener(FlexEvent.BUTTON_DOWN,onUpdateClose);
+				dataTable.updateItem(event.getRequestModifyData(), event.getRequestModifyRowIndex())
+			}
+			
+			private function onUpdate(event:FlexEvent):void{
+				updateContract();
+			}
+			
+			private function onUpdateAndClose(event:FlexEvent):void{
+				updateContract();
+				PopUpManager.removePopUp(updateForm);
+			}
+			
+			private function updateContract() : void {
+				var modified:ContractTO = updateForm.getContract();
+				modified.name = this.updateForm.nameInput.text;
+				modified.billPeriodBaseline = int(this.updateForm.periodBaseLineInput.text);
+				const periodIndex : int = this.updateForm.periodComboBox.selectedIndex;
+				switch(periodIndex) {
+					case 0:
+						modified.billPeriodBaselineUnit = "DAY";
+						break;
+					case 1:
+						modified.billPeriodBaselineUnit = "MONTH";
+						break;
+					case 2:
+						modified.billPeriodBaselineUnit = "YEAR";
+						break;
+					default:
+						modified.billPeriodBaselineUnit = "UNSPECIFIED";
+						break;
+				}
+				
+				modified.billVolumnBaseline = int(this.updateForm.volumnBaseLineInput.text);
+				modified.billVolumnBaselineUnitId = UnitOfMeasureQTO(this.updateForm.uomComboxBox.selectedItem).id;
+				modified.billVolumnBaselineUnitName = UnitOfMeasureQTO(this.updateForm.uomComboxBox.selectedItem).name;
+				modified.effectiveEndDate = this.updateForm.endDateField.selectedDate;
+				modified.effectiveStartDate = this.updateForm.startDateField.selectedDate;
+				
+				const termIndex : int = this.updateForm.paymentTermComboxBox.selectedIndex;
+				
+				switch(termIndex) {
+					case 0:
+						modified.paymentTerm = "ON_RECEIPT";
+						break;
+					case 1:
+						modified.paymentTerm = "NET7";
+						break;
+					case 2:
+						modified.paymentTerm = "NET15";
+						break;
+					case 3:
+						modified.paymentTerm = "NET30";
+						break;
+					case 4:
+						modified.paymentTerm = "NET90";
+						break;
+					default:
+						modified.paymentTerm = "UNSPECIFIED";
+						break;
+				}
+				
+				modified.billToAccount = AccountTO(this.updateForm.bill2AccountComboBox.selectedItem);
+				modified.soldToAccount = AccountTO(this.updateForm.sold2AccountComboBox.selectedItem);
+				modified.shipToAccount = AccountTO(this.updateForm.ship2AccountComboBox.selectedItem);
+				modified.payerAccount = AccountTO(this.updateForm.payerAccountComboBox.selectedItem);
+				
+				//modified.unitOfProjects = new ArrayCollection(this.updateForm.unitOfProjectTable.model);
+				//modified.ratePlanComponents = new ArrayCollection(this.updateForm.priceTable.model);
+				
+//				//TODO
+//				this.resultToken = contractServer.updateContract(modified);
+//				this.lastRPCType = UPDATE;
+            }
+			
+			private function onUpdateClose(event:FlexEvent):void{
+				PopUpManager.removePopUp(updateForm);
+			}	
+			
+			private function executeUpdate(event:ActionTableEvent):void {
+				var modified:Array = event.getSubmitingData();
+				if(!modified || modified.length <= 0){
+					return;
+				}
+				var submitData:Array = new Array();
+				for (var i:int = 0; i < modified.length; i ++) {
+					submitData[i] = modified[i];
+				}
+				resultToken = contractServer.updateContracts(submitData);
+				lastRPCType = UPDATE;
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : RPC Handlers
+			//////////////////////////////////////////////////////	
+			private function onFault(event:FaultEvent):void {
+				trace(event);
+				Alert.show(event.fault.faultString, "Error");
+				initDataModel();
+			}
+			
+			private function initDataModel():void {
+				contractQueryServer.findContracts();
+			}      
+			
+			private function onSuccess(event:ResultEvent):void {
+				if((!resultToken)||(!resultToken.message)||(!resultToken.message.body)){
+					return;
+				}
+				var body:Array = resultToken.message.body as Array;
+				if(lastRPCType == CREATE){
+					if(null != resultToken.result){
+						resultToken = contractQueryServer.findContractById(resultToken.result);
+						lastRPCType = QUERY;
+					} else {
+						lastRPCType = INVALID;
+					}
+				} else {
+					lastRPCType = INVALID;
+				}
+			}
+			
+			private function onDataFetch(event:ResultEvent):void{
+				if (event.result is ArrayCollection) {
+					dataList = ArrayCollection(event.result).toArray();
+					dataTable.model = dataList;
+				} else {
+					dataTable.submitCreateData(event.result);
+				}
+			}
+			
+			private function onDataFetchFault(event:FaultEvent):void{
+				trace(event.fault.toString());
+				Alert.show(event.fault.toString());
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Methods : Override Methods
+			//////////////////////////////////////////////////////	
+			public override function reset():void{
+				dataTable.reset();
+			}            
+		]]>
+	</mx:Script>
+	
+	<mx:RemoteObject id="contractQueryServer" destination="Contract"/>
+	<mx:RemoteObject id="contractServer" destination="Contract"/>
+	<mx:Panel width="100%" height="100%" fontSize="12" layout="vertical" title="合约">
+		<components:ActionTable id="dataTable"/>
+	</mx:Panel>
+</framework:ManagedView>
+

@@ -1,0 +1,891 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml"  
+		  xmlns:components="net.vicp.madz.components.*"
+		  layout="absolute" 
+		  width="972" 
+		  height="698" 
+		  title="修改合约" 
+		  creationComplete="onCreateComplete(event);" 
+		  fontSize="12">
+	
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.ArrayCollection;
+			import mx.controls.dataGridClasses.DataGridColumn;
+			import mx.core.IFlexDisplayObject;
+			import mx.events.FlexEvent;
+			import mx.events.ListEvent;
+			import mx.managers.PopUpManager;
+			import mx.rpc.AsyncToken;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			import net.vicp.madz.account.views.ContactCreateDialog;
+			import net.vicp.madz.account.views.ContactModifyDialog;
+			import net.vicp.madz.account.vo.AccountTO;
+			import net.vicp.madz.account.vo.ContactTO;
+			import net.vicp.madz.biz.common.vo.CategoryQTO;
+			import net.vicp.madz.biz.common.vo.MerchandiseQTO;
+			import net.vicp.madz.components.events.ActionTableEvent;
+			import net.vicp.madz.components.renderer.DateRendererFactory;
+			import net.vicp.madz.contract.vo.ContractRatePlanComponentTO;
+			import net.vicp.madz.contract.vo.ContractTO;
+			import net.vicp.madz.contract.vo.ProjectTO;
+			import net.vicp.madz.contract.vo.UnitOfProjectTO;
+			import net.vicp.madz.utils.SelectUtils;
+			
+			private static const INVALID:int = -1;
+			private static const QUERY:int = 0;
+			private static const CREATE:int = 1;
+			private static const UPDATE:int = 2;
+			private static const DELETE:int = 3;
+			
+			private var contract : ContractTO;
+			
+			private var resultToken:AsyncToken;
+			private var lastRPCType:int;
+			
+			private var uopCreateForm:UnitOfProjectCreateDialog;
+			private var uopUpdateForm:UnitOfProjectModifyDialog;
+			private var uopResultToken : AsyncToken;
+			private var uopLastRPCType : int;
+			
+			private var priceTableCreateForm:PriceTableCreateDialog;
+			private var priceTableUpdateForm:PriceTableModifyDialog;
+			private var priceTableResultToken : AsyncToken;
+			private var priceTableLastRPCType : int;
+			
+			
+			private var contactCreateForm:ContactCreateDialog;
+			private var contactUpdateForm:ContactModifyDialog;
+			private var contactResultToken : AsyncToken;
+			private var contactLastRPCType : int;
+			
+			[Bindable]
+			private var accounts : Array;
+			[Bindable]
+			private var uoms : Array;
+			[Bindable]
+			private var unitOfProjects : Array = new Array();
+			[Bindable]
+			private var ratePlanComponents : Array =  new Array();
+			
+			
+			
+			public function getContract():ContractTO
+			{
+				return this.contract;
+			}
+			
+			public function setContract(contract : ContractTO) : void {
+				this.contract = contract;
+				load();
+			}
+			
+			public function reset():void{
+				nameInput.text = "";
+				if (null == contract || "DRAFT" != contract.state) {
+				    updateButton.enabled = false;
+				    updateAndCloseButton.enabled = false;
+				}
+			}
+			
+			private function onCreateComplete(event:FlexEvent):void{
+				commonObjectQuery.addEventListener(ResultEvent.RESULT,onUnitOfMeasureFetch);
+				commonObjectQuery.addEventListener(FaultEvent.FAULT,onFault);
+				commonObjectQuery.findUnitOfMeasure(false);
+				
+				accountQueryServer.addEventListener(ResultEvent.RESULT,onAccountFetch);
+				accountQueryServer.findAccounts();
+				
+				unitOfProjectServer.addEventListener(ResultEvent.RESULT, onUnitOfProjectCreatedOnServerSide);
+				unitOfProjectQueryServer.addEventListener(ResultEvent.RESULT, onUnitOfProjectFetched);
+				
+				contractRatePlanComponentServer.addEventListener(ResultEvent.RESULT, onContractRatePlanComponentCreatedOnServerSide);
+				contractRatePlanComponentQueryServer.addEventListener(ResultEvent.RESULT, onContractRatePlanComponentFetched);
+				
+				stage.focus = nameInput;
+				
+				validate();
+				
+				load();
+			}
+			
+			private function load() : void {
+				if (null != periodComboBox) {
+					const periodUnits : Array = new Array();
+					periodUnits[0] = "日";
+					periodUnits[1] = "月";
+					periodUnits[2] = "年";
+					periodComboBox.dataProvider = periodUnits;
+					
+					if(contract.billPeriodBaselineUnit == "DAY") {
+						periodComboBox.selectedIndex = 0;
+					} else if (contract.billPeriodBaselineUnit == "MONTH") {
+						periodComboBox.selectedIndex = 1;
+					} else if (contract.billPeriodBaselineUnit == "YEAR") {
+						periodComboBox.selectedIndex = 2;
+					}
+				}
+				
+				if (null != paymentTermComboxBox) {
+					
+					const paymentTerms : Array = new Array();
+					paymentTerms[0] = "当日";
+					paymentTerms[1] = "7日内";
+					paymentTerms[2] = "15日内";
+					paymentTerms[3] = "30日内";
+					paymentTerms[4] = "90日内";
+					
+					paymentTermComboxBox.dataProvider = paymentTerms;
+					if (contract.paymentTerm == "ON_RECEIPT") {
+						paymentTermComboxBox.selectedIndex = 0;
+					} else if (contract.paymentTerm == "NET7") {
+						paymentTermComboxBox.selectedIndex = 1;
+					} else if (contract.paymentTerm == "NET15") {
+						paymentTermComboxBox.selectedIndex = 2;
+					} else if (contract.paymentTerm == "NET30") {
+						paymentTermComboxBox.selectedIndex = 3;
+					} else if (contract.paymentTerm == "NET90") {
+						paymentTermComboxBox.selectedIndex = 4;
+					} else {
+						paymentTermComboxBox.text = "未指定";
+					}
+				}
+				
+				if (null != nameInput) {
+				    this.nameInput.text = contract.name;
+				}
+				if (null != periodBaseLineInput) {
+				    this.periodBaseLineInput.text = contract.billPeriodBaseline + "";
+				}
+				if (null != this.volumnBaseLineInput) {
+				    this.volumnBaseLineInput.text = contract.billVolumnBaseline + "";
+				}
+				if (null != effectiveDateField) {
+				    this.effectiveDateField.selectedDate = contract.effectiveStartDate;
+				}
+				if (null != startDateField) {
+				    this.startDateField.selectedDate = contract.effectiveStartDate;
+				}
+				if (null != endDateField) {
+				    this.endDateField.selectedDate = contract.effectiveEndDate;
+				}
+				
+				if (null != updateButton && null != updateAndCloseButton) {
+					if (null == contract || "DRAFT" != contract.state) {
+						updateButton.enabled = false;
+						updateAndCloseButton.enabled = false;
+					} else {
+						updateButton.enabled = true;
+						updateAndCloseButton.enabled = true;
+					}
+				}
+				
+				if (null != accounts) {
+				    loadAccount();
+				}
+				
+				if (null != this.unitOfProjectTable) {
+					this.unitOfProjectTable.model = this.contract.unitOfProjects.toArray();
+				}
+				
+				if (null != this.priceTable) {
+					this.priceTable.model = this.contract.ratePlanComponents.toArray();
+				}
+			}
+			
+			private function onUnitOfMeasureFetch(event:ResultEvent) : void {
+				uoms = ArrayCollection(event.result).toArray();
+				uomComboxBox.dataProvider = uoms;
+				if (null != this.contract.billVolumnBaselineUnitId) {
+					uomComboxBox.selectedItem = SelectUtils.getSelectedItem(this.contract.billVolumnBaselineUnitId, uoms);
+				}
+			}
+			
+			private function onAccountFetch(event:ResultEvent) : void{
+				accounts = ArrayCollection(event.result).toArray();
+				loadAccount();
+			}
+			
+			private function loadAccount() : void {
+				bill2AccountComboBox.dataProvider = accounts;
+				if (null != this.contract.billToAccount.id) {
+					bill2AccountComboBox.selectedItem = SelectUtils.getSelectedItem(this.contract.billToAccount.id, accounts);
+				}
+				sold2AccountComboBox.dataProvider = accounts;
+				if (null != this.contract.soldToAccount.id) {
+					sold2AccountComboBox.selectedItem = SelectUtils.getSelectedItem(this.contract.soldToAccount.id, accounts);
+				}
+				ship2AccountComboBox.dataProvider = accounts;
+				if (null != this.contract.shipToAccount.id) {
+					ship2AccountComboBox.selectedItem = SelectUtils.getSelectedItem(this.contract.shipToAccount.id, accounts);
+				}
+				payerAccountComboBox.dataProvider = accounts;
+				if (null != this.contract.payerAccount.id) {
+					payerAccountComboBox.selectedItem = SelectUtils.getSelectedItem(this.contract.payerAccount.id, accounts);
+				}
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Component Intializing: Unit Of Project Table
+			//////////////////////////////////////////////////////	
+			private function onUnitOfProjectTableCreated(event:FlexEvent):void{
+				var columnProvider:Array = new Array();
+				
+				var col:DataGridColumn = new DataGridColumn("name");
+				col.headerText="名称";
+				col.width = 120;
+				col.dataField="name";
+				columnProvider.push(col);    
+				
+				col = new DataGridColumn("startDate");
+				col.headerText="开工日期";
+				col.dataField="startDate";
+				col.editable = false;
+				col.itemRenderer = new DateRendererFactory("startDate");
+				columnProvider.push(col);     
+				
+				col = new DataGridColumn("endDate");
+				col.headerText="收工日期";
+				col.dataField="endDate";
+				col.editable = false;
+				col.itemRenderer = new DateRendererFactory("endDate");
+				columnProvider.push(col);     
+				
+				col = new DataGridColumn("billToContactName");
+				col.headerText="收票联系人";
+				col.dataField="billToContact.name";
+				col.editable = false;
+				columnProvider.push(col); 
+				
+				col = new DataGridColumn("soldToContactName");
+				col.headerText="售达联系人";
+				col.dataField="soldToContact.name";
+				col.editable = false;
+				columnProvider.push(col); 
+				
+				col = new DataGridColumn("shipToContactName");
+				col.headerText="收货联系人";
+				col.dataField="shipToContact.name";
+				col.editable = false;
+				columnProvider.push(col); 
+				
+				col = new DataGridColumn("payerContactName");
+				col.headerText="付款联系人";
+				col.dataField="payerContact.name";
+				col.editable = false;
+				columnProvider.push(col); 
+				
+				unitOfProjectTable.columnProvider = columnProvider;
+				
+				//unitOfProjectTable.addEventListener(ListEvent.ITEM_CLICK,onUnitOfProjectItemSelected);
+				//For Query
+				unitOfProjectTable.addEventListener(ActionTableEvent.REQUEST_DATA_QUERY,executeUnitOfProjectQuery);
+				unitOfProjectTable.addEventListener(ActionTableEvent.SUBMIT_QUERY_CONDITION,executeUnitOfProjectQuery);
+				//For Modify
+				unitOfProjectTable.addEventListener(ActionTableEvent.REQUEST_DATA_MODIFY,popupUnitOfProjectModifyView);
+				unitOfProjectTable.addEventListener(ActionTableEvent.DATA_MODIFY_SUBMIT,executeUpdateUnitOfProject);
+				//For Create
+				unitOfProjectTable.addEventListener(ActionTableEvent.DATA_CREATE,popupCreateUnitOfProjectView);
+				//For Delete
+				unitOfProjectTable.addEventListener(ActionTableEvent.DATA_DELETE,executeDeleteUnitOfProject);
+				
+				//For Create, Modify, Delete
+				//server.addEventListener(FaultEvent.FAULT,onUnitOfProjectFault);
+				//server.addEventListener(ResultEvent.RESULT,onUnitOfProjectSuccess);
+				
+				//For Query
+				//queryServer.addEventListener(ResultEvent.RESULT,onUnitOfProjectDataFetch);
+				//queryServer.addEventListener(FaultEvent.FAULT,onUnitOfProjectDataFetchFault);
+				unitOfProjectTable.model = contract.unitOfProjects.toArray();
+			}
+			//////////////////////////////////////////////////////
+			//// Event Handlers : UnitOfProject Query Handlers
+			//////////////////////////////////////////////////////	
+			private function executeUnitOfProjectQuery(event:ActionTableEvent) : void {
+				if (null != contract) {
+					//contractQueryServer.findUnitOfProjectByContractId(contract.id);
+				}
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : UnitOfProject Create Handlers
+			//////////////////////////////////////////////////////	
+			private function popupCreateUnitOfProjectView(event:ActionTableEvent) : void {
+				if(uopCreateForm == null){
+					uopCreateForm = new UnitOfProjectCreateDialog();
+					uopCreateForm.parentDialog = this;
+				}else{
+					uopCreateForm.reset();
+				}
+				PopUpManager.addPopUp(uopCreateForm as IFlexDisplayObject, this as DisplayObject, true);
+				PopUpManager.centerPopUp(uopCreateForm);
+				uopCreateForm.createButton.addEventListener(FlexEvent.BUTTON_DOWN,onUnitOfProjectCreate);
+				uopCreateForm.createAndCloseButton.addEventListener(FlexEvent.BUTTON_DOWN,onUnitOfProjectCreateAndClose);
+				uopCreateForm.closeBtn.addEventListener(FlexEvent.BUTTON_DOWN,onUnitOfProjectCreateClose);
+			}
+			
+			private function onUnitOfProjectCreate(event:FlexEvent) : void {
+				createUnitOfProject();
+			}
+			
+			private function onUnitOfProjectCreateAndClose(event:FlexEvent) : void {
+				createUnitOfProject();
+				PopUpManager.removePopUp(uopCreateForm);
+			}
+			
+			private function onUnitOfProjectCreateClose(event:FlexEvent) : void {
+				PopUpManager.removePopUp(uopCreateForm);
+			}
+			
+			private function createUnitOfProject() : void {
+				var newTO:UnitOfProjectTO = new UnitOfProjectTO();
+				newTO.name = this.uopCreateForm.nameInput.text;
+				newTO.billToContact = ContactTO(this.uopCreateForm.billToContactComboBox.selectedItem);
+				newTO.shipToContact =  ContactTO(this.uopCreateForm.shipToContactComboBox.selectedItem);
+				newTO.soldToContact = ContactTO(this.uopCreateForm.soldToContactComboBox.selectedItem);
+				newTO.payerContact =  ContactTO(this.uopCreateForm.payerContactComboBox.selectedItem);
+				
+				if (null != this.uopCreateForm.projectComboBox.selectedItem) {
+					newTO.projectId = ProjectTO(this.uopCreateForm.projectComboBox.selectedItem).id;
+					newTO.projectName = ProjectTO(this.uopCreateForm.projectComboBox.selectedItem).name;
+				}
+				
+				newTO.startDate = this.uopCreateForm.startDateField.selectedDate;
+				newTO.endDate = this.uopCreateForm.endDateField.selectedDate;
+				newTO.contractId = this.contract.id;
+				
+				unitOfProjectServer.createUnitOfProject(newTO);
+				this.lastRPCType = CREATE;
+				//unitOfProjectTable.submitCreateData(newTO);
+				
+				//				this.resultToken = contractServer.createUnitOfProject(newTO);
+				//				this.lastRPCType = CREATE;
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : UnitOfProject Update Handlers
+			//////////////////////////////////////////////////////	
+			private function popupUnitOfProjectModifyView(event:ActionTableEvent) : void {
+				if(uopUpdateForm == null){
+					uopUpdateForm = new UnitOfProjectModifyDialog();
+				}else{
+					uopUpdateForm.reset();
+				}
+				uopUpdateForm.parentDialog = this;
+				uopUpdateForm.setUnitOfProject(UnitOfProjectTO(event.getRequestModifyData()));
+				
+				PopUpManager.addPopUp(uopUpdateForm as IFlexDisplayObject, this as DisplayObject, true);
+				PopUpManager.centerPopUp(uopUpdateForm);
+				uopUpdateForm.updateButton.addEventListener(FlexEvent.BUTTON_DOWN,onUnitOfProjectUpdate);
+				uopUpdateForm.updateAndCloseButton.addEventListener(FlexEvent.BUTTON_DOWN,onUnitOfProjectUpdateAndClose);
+				uopUpdateForm.closeBtn.addEventListener(FlexEvent.BUTTON_DOWN,onUnitOfProjectUpdateClose);
+				unitOfProjectTable.updateItem(event.getRequestModifyData(), event.getRequestModifyRowIndex())
+				
+			}
+			
+			private function onUnitOfProjectUpdate(event : FlexEvent) : void {
+				updateUnitOfProject();
+			}
+			
+			private function onUnitOfProjectUpdateAndClose(event : FlexEvent) : void {
+				updateUnitOfProject();
+				PopUpManager.removePopUp(uopUpdateForm);
+			}
+			
+			private function onUnitOfProjectUpdateClose(event : FlexEvent) : void {
+				PopUpManager.removePopUp(uopUpdateForm);
+			}
+			
+			private function updateUnitOfProject() : void {
+				//TODO update from updateForm
+				//var modified:ContractTO = null;
+				//resultToken = server.updateContracts(modified);
+				//lastRPCType = UPDATE;
+			}
+			
+			private function executeUpdateUnitOfProject(event:ActionTableEvent) : void {
+				var modified:Array = event.getSubmitingData();
+				if(!modified || modified.length <= 0){
+					return;
+				}
+				var submitData:Array = new Array();
+				uopResultToken = contractServer.updateUnitOfProjects(modified);
+				uopLastRPCType = UPDATE;
+				
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : UnitOfProject Delete Handlers
+			//////////////////////////////////////////////////////	
+			private function executeDeleteUnitOfProject(event:ActionTableEvent) : void {
+				var uops:Array = event.getDeletedData();
+				if(uops == null || uops.length <= 0){
+					return;
+				}
+				var task:Array = new Array(uops.length);
+				for(var i:int = 0; i < uops.length; i ++){
+					task[i] = uops[i].id;
+				}
+				resultToken = contractServer.hardDeleteUnitOfProject(task);
+				lastRPCType = DELETE;
+			}
+			
+			
+			//////////////////////////////////////////////////////
+			//// Component Intializing: Pricie Table
+			//////////////////////////////////////////////////////	
+			private function onPriceTableCreated(event:FlexEvent):void{
+				var columnProvider:Array = new Array();
+				var col:DataGridColumn = new DataGridColumn("merchandiseName");
+				col.headerText="产品名称";
+				col.dataField="merchandise.name";
+				col.editable = false;
+				columnProvider.push(col);
+				
+				col = new DataGridColumn("chargeModel");
+				col.headerText="费用模型";
+				col.dataField="chargeModel";
+				col.editable = false;
+				columnProvider.push(col);
+				
+				col = new DataGridColumn("chargeType");
+				col.headerText="费用类型";
+				col.dataField="chargeType";
+				col.editable = false;
+				columnProvider.push(col);
+				
+				col = new DataGridColumn("chargeRate");
+				col.headerText="费率";
+				col.dataField="chargeRate";
+				columnProvider.push(col);
+				
+				col = new DataGridColumn("unitOfMeasureName");
+				col.headerText="计量单位";
+				col.dataField="unitOfMeasure.name";
+				col.editable = false;
+				columnProvider.push(col);
+				
+				priceTable.columnProvider = columnProvider;
+				
+				//unitOfProjectTable.addEventListener(ListEvent.ITEM_CLICK,onUnitOfProjectItemSelected);
+				//For Query
+				priceTable.addEventListener(ActionTableEvent.REQUEST_DATA_QUERY,executePriceTableQuery);
+				priceTable.addEventListener(ActionTableEvent.SUBMIT_QUERY_CONDITION,executePriceTableQuery);
+				//For Modify
+				priceTable.addEventListener(ActionTableEvent.REQUEST_DATA_MODIFY,popupPriceTableModifyView);
+				priceTable.addEventListener(ActionTableEvent.DATA_MODIFY_SUBMIT,executeUpdatePriceTable);
+				//For Create
+				priceTable.addEventListener(ActionTableEvent.DATA_CREATE,popupCreatePriceTableView);
+				//For Delete
+				priceTable.addEventListener(ActionTableEvent.DATA_DELETE,executeDeletePriceTable);
+				
+				//For Create, Modify, Delete
+				//server.addEventListener(FaultEvent.FAULT,onUnitOfProjectFault);
+				//server.addEventListener(ResultEvent.RESULT,onUnitOfProjectSuccess);
+				
+				//For Query
+				//queryServer.addEventListener(ResultEvent.RESULT,onUnitOfProjectDataFetch);
+				//queryServer.addEventListener(FaultEvent.FAULT,onUnitOfProjectDataFetchFault);
+				priceTable.model = contract.ratePlanComponents.toArray();
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Price Table Query Handlers
+			//////////////////////////////////////////////////////	
+			private function executePriceTableQuery(event:ActionTableEvent) : void {
+				if (null != contract) {
+					//contractQueryServer.findRatePlanComponentByContractId(contract.id);
+				}
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Price Table Create Handlers
+			//////////////////////////////////////////////////////	
+			private function popupCreatePriceTableView(event:ActionTableEvent) : void {
+				if(priceTableCreateForm == null){
+					priceTableCreateForm = new PriceTableCreateDialog();
+				}else{
+					priceTableCreateForm.reset();
+				}
+				PopUpManager.addPopUp(priceTableCreateForm as IFlexDisplayObject, this as DisplayObject, true);
+				PopUpManager.centerPopUp(priceTableCreateForm);
+				priceTableCreateForm.createButton.addEventListener(FlexEvent.BUTTON_DOWN,onRatePlanComponentCreate);
+				priceTableCreateForm.createAndCloseButton.addEventListener(FlexEvent.BUTTON_DOWN,onRatePlanComponentCreateAndClose);
+				priceTableCreateForm.closeBtn.addEventListener(FlexEvent.BUTTON_DOWN,onRatePlanComponentCreateClose);
+			}
+			
+			private function onRatePlanComponentCreate(event:FlexEvent) : void {
+				createRatePlanComponent();
+			}
+			
+			private function onRatePlanComponentCreateAndClose(event:FlexEvent) : void {
+				createRatePlanComponent();
+				PopUpManager.removePopUp(priceTableCreateForm);
+			}
+			
+			private function onRatePlanComponentCreateClose(event:FlexEvent) : void {
+				PopUpManager.removePopUp(priceTableCreateForm);
+			}
+			
+			private function createRatePlanComponent() : void {
+				var newTO:ContractRatePlanComponentTO = new ContractRatePlanComponentTO();
+				newTO.chargeModel = "按计量单位计价";
+				newTO.chargeType = "按使用量计价";
+				newTO.merchandise = MerchandiseQTO(priceTableCreateForm.merchandiseComboBox.selectedItem);
+				newTO.chargeRate = Number(priceTableCreateForm.effectivePriceInput.text);
+				newTO.contract = this.contract;
+				this.priceTable.submitCreateData(newTO);
+				this.contractRatePlanComponentServer.createContractRatePlanComponent(newTO);
+				this.lastRPCType = CREATE;
+				//				this.priceTableResultToken = contractServer.createRatePlanComponent(newTO);
+				//				this.priceTableLastRPCType = CREATE;
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Price Table Update Handlers
+			//////////////////////////////////////////////////////	
+			private function popupPriceTableModifyView(event:ActionTableEvent) : void {
+				if(priceTableUpdateForm == null){
+					priceTableUpdateForm = new PriceTableModifyDialog();
+				}else{
+					priceTableUpdateForm.reset();
+				}
+				priceTableUpdateForm.setRatePlanComponent(ContractRatePlanComponentTO(event.getRequestModifyData()));
+				PopUpManager.addPopUp(priceTableUpdateForm as IFlexDisplayObject, this as DisplayObject, true);
+				PopUpManager.centerPopUp(priceTableUpdateForm);
+				priceTableUpdateForm.updateButton.addEventListener(FlexEvent.BUTTON_DOWN,onPriceTableUpdate);
+				priceTableUpdateForm.updateAndCloseButton.addEventListener(FlexEvent.BUTTON_DOWN,onPriceTableUpdateAndClose);
+				priceTableUpdateForm.closeBtn.addEventListener(FlexEvent.BUTTON_DOWN,onPriceTableUpdateClose);
+				unitOfProjectTable.updateItem(event.getRequestModifyData(), event.getRequestModifyRowIndex())
+				
+			}
+			
+			private function onPriceTableUpdate(event : FlexEvent) : void {
+				updateRatePlanComponent();
+			}
+			
+			private function onPriceTableUpdateAndClose(event : FlexEvent) : void {
+				updateRatePlanComponent();
+				PopUpManager.removePopUp(priceTableUpdateForm);
+			}
+			
+			private function onPriceTableUpdateClose(event : FlexEvent) : void {
+				PopUpManager.removePopUp(priceTableUpdateForm);
+			}
+			
+			private function updateRatePlanComponent() : void {
+				//TODO update from updateForm
+				//var modified:ContractTO = null;
+				//resultToken = server.updateContracts(modified);
+				//lastRPCType = UPDATE;
+			}
+			
+			private function executeUpdatePriceTable(event:ActionTableEvent) : void {
+				var modified:Array = event.getSubmitingData();
+				if(!modified || modified.length <= 0){
+					return;
+				}
+				var submitData:Array = new Array();
+				priceTableResultToken = contractServer.updateRatePlanComponents(modified);
+				priceTableLastRPCType = UPDATE;
+				
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Price Table Delete Handlers
+			//////////////////////////////////////////////////////	
+			private function executeDeletePriceTable(event:ActionTableEvent) : void {
+				var uops:Array = event.getDeletedData();
+				if(uops == null || uops.length <= 0){
+					return;
+				}
+				var task:Array = new Array(uops.length);
+				for(var i:int = 0; i < uops.length; i ++){
+					task[i] = uops[i].id;
+				}
+				priceTableResultToken = contractServer.hardDeleteRatePlanComponent(task);
+				priceTableLastRPCType = DELETE;
+			}
+			
+			
+			private function onContactTableCreated(event:FlexEvent):void{
+				var columnProvider:Array = new Array();
+				var col:DataGridColumn = new DataGridColumn("name");
+				col.headerText="姓名";
+				col.dataField="name";
+				columnProvider.push(col);
+				
+				col = new DataGridColumn("contactType");
+				col.headerText="类型";
+				col.dataField="contactType";
+				columnProvider.push(col);
+				
+				col = new DataGridColumn("mobile");
+				col.headerText="移动电话";
+				col.dataField="mobile";
+				columnProvider.push(col);           
+				
+				col = new DataGridColumn("telephone");
+				col.headerText="固定电话";
+				col.dataField="telephone";
+				col.editable = true;
+				columnProvider.push(col); 
+				
+				col = new DataGridColumn("email");
+				col.headerText = "电邮";
+				col.dataField = "email";
+				col.editable = true;
+				columnProvider.push(col); 
+				
+				contactTable.columnProvider = columnProvider;
+				//unitOfProjectTable.addEventListener(ListEvent.ITEM_CLICK,onUnitOfProjectItemSelected);
+				//For Query
+				contactTable.addEventListener(ActionTableEvent.REQUEST_DATA_QUERY,executeContactQuery);
+				contactTable.addEventListener(ActionTableEvent.SUBMIT_QUERY_CONDITION,executeContactQuery);
+				//For Modify
+				contactTable.addEventListener(ActionTableEvent.REQUEST_DATA_MODIFY,popupContactModifyView);
+				contactTable.addEventListener(ActionTableEvent.DATA_MODIFY_SUBMIT,executeUpdateContact);
+				//For Create
+				contactTable.addEventListener(ActionTableEvent.DATA_CREATE,popupCreateContactView);
+				//For Delete
+				contactTable.addEventListener(ActionTableEvent.DATA_DELETE,executeDeleteContact);
+				
+				//For Create, Modify, Delete
+				//server.addEventListener(FaultEvent.FAULT,onUnitOfProjectFault);
+				//server.addEventListener(ResultEvent.RESULT,onUnitOfProjectSuccess);
+				
+				//For Query
+				//queryServer.addEventListener(ResultEvent.RESULT,onUnitOfProjectDataFetch);
+				//queryServer.addEventListener(FaultEvent.FAULT,onUnitOfProjectDataFetchFault);
+				
+				
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Contact Query Handlers
+			//////////////////////////////////////////////////////	
+			private function executeContactQuery(event:ActionTableEvent) : void {
+				if (null != contract) {
+					contractQueryServer.findContactByContractId(contract.id);
+				}
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Contact Create Handlers
+			//////////////////////////////////////////////////////	
+			private function popupCreateContactView(event:ActionTableEvent) : void {
+				if(contactCreateForm == null){
+					contactCreateForm = new ContactCreateDialog();
+				}else{
+					contactCreateForm.reset();
+				}
+				PopUpManager.addPopUp(contactCreateForm as IFlexDisplayObject, this as DisplayObject, true);
+				PopUpManager.centerPopUp(contactCreateForm);
+				contactCreateForm.createButton.addEventListener(FlexEvent.BUTTON_DOWN,onContactCreate);
+				contactCreateForm.createAndCloseButton.addEventListener(FlexEvent.BUTTON_DOWN,onContactCreateAndClose);
+				contactCreateForm.closeButton.addEventListener(FlexEvent.BUTTON_DOWN,onContactCreateClose);
+			}
+			
+			private function onContactCreate(event:FlexEvent) : void {
+				createContact();
+			}
+			
+			private function onContactCreateAndClose(event:FlexEvent) : void {
+				createContact();
+				PopUpManager.removePopUp(contactCreateForm);
+			}
+			
+			private function onContactCreateClose(event:FlexEvent) : void {
+				PopUpManager.removePopUp(contactCreateForm);
+			}
+			
+			private function createContact() : void {
+				var newTO:ContactTO = new ContactTO();
+				
+				this.contactResultToken = accountServer.createContact(newTO);
+				this.contactLastRPCType = CREATE;
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Contact Update Handlers
+			//////////////////////////////////////////////////////	
+			private function popupContactModifyView(event:ActionTableEvent) : void {
+				if(contactUpdateForm == null){
+					contactUpdateForm = new ContactModifyDialog();
+				}else{
+					contactUpdateForm.reset();
+				}
+				PopUpManager.addPopUp(contactUpdateForm as IFlexDisplayObject, this as DisplayObject, true);
+				PopUpManager.centerPopUp(contactUpdateForm);
+				contactUpdateForm.updateButton.addEventListener(FlexEvent.BUTTON_DOWN,onContactUpdate);
+				contactUpdateForm.updateAndCloseButton.addEventListener(FlexEvent.BUTTON_DOWN,onContactUpdateAndClose);
+				contactUpdateForm.closeButton.addEventListener(FlexEvent.BUTTON_DOWN,onContactUpdateClose);
+				unitOfProjectTable.updateItem(event.getRequestModifyData(), event.getRequestModifyRowIndex())
+				
+			}
+			
+			private function onContactUpdate(event : FlexEvent) : void {
+				updateContact();
+			}
+			
+			private function onContactUpdateAndClose(event : FlexEvent) : void {
+				updateContact();
+				PopUpManager.removePopUp(contactUpdateForm);
+			}
+			
+			private function onContactUpdateClose(event : FlexEvent) : void {
+				PopUpManager.removePopUp(contactUpdateForm);
+			}
+			
+			private function updateContact() : void {
+				//TODO update from updateForm
+				//var modified:ContractTO = null;
+				//resultToken = server.updateContracts(modified);
+				//lastRPCType = UPDATE;
+			}
+			
+			private function executeUpdateContact(event:ActionTableEvent) : void {
+				var modified:Array = event.getSubmitingData();
+				if(!modified || modified.length <= 0){
+					return;
+				}
+				var submitData:Array = new Array();
+				contactResultToken = accountServer.updateContacts(modified);
+				contactLastRPCType = UPDATE;
+				
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Contact Delete Handlers
+			//////////////////////////////////////////////////////	
+			private function executeDeleteContact(event:ActionTableEvent) : void {
+				var uops:Array = event.getDeletedData();
+				if(uops == null || uops.length <= 0){
+					return;
+				}
+				var task:Array = new Array(uops.length);
+				for(var i:int = 0; i < uops.length; i ++){
+					task[i] = uops[i].id;
+				}
+				contactResultToken = accountServer.softDeleteContacts(task);
+				contactLastRPCType = DELETE;
+			}
+			
+			private function onFetch(event:ResultEvent):void{
+			}
+			
+			private function onFault(event:FaultEvent):void{
+				
+			}
+			
+			private function validate() : void {
+				if (null != nameInput.text && 0 < nameInput.text.length) {
+					updateButton.enabled = true;
+					updateAndCloseButton.enabled = true;
+				} else {
+					updateButton.enabled = false;
+					updateAndCloseButton.enabled = false;
+				}
+			}
+			
+			protected function onUnitOfProjectCreatedOnServerSide(event:ResultEvent):void
+			{
+				if (this.lastRPCType == CREATE) {
+				    var unitOfProjectId : String = String(event.result);
+					unitOfProjectQueryServer.findUnitOfProjectById(unitOfProjectId);
+				} 
+			}
+			
+			protected function onUnitOfProjectFetched(event:ResultEvent):void
+			{
+				var unitOfProjectTO : UnitOfProjectTO = UnitOfProjectTO(event.result);
+				unitOfProjectTable.submitCreateData(unitOfProjectTO);
+			}
+			
+			protected function onContractRatePlanComponentCreatedOnServerSide(event:ResultEvent):void
+			{
+				if (this.lastRPCType == CREATE) {
+					var contractRatePlanComponentId : String = String(event.result);
+					contractRatePlanComponentQueryServer.findContractRatePlanComponentById(contractRatePlanComponentId);
+				} 
+			}
+			
+			protected function onContractRatePlanComponentFetched(event:ResultEvent):void
+			{
+				var contractRatePlanComponentTO : ContractRatePlanComponentTO = ContractRatePlanComponentTO(event.result);
+				priceTable.submitCreateData(ContractRatePlanComponentTO);
+			}
+			
+			
+		]]>
+	</mx:Script>
+	
+	<mx:Label x="150" y="77" width="76" height="25" fontSize="12" fontWeight="bold" text="名称："
+			  textAlign="right"/>
+	<mx:TextInput x="227" y="77" width="200" id="nameInput" tabIndex="2" height="25" change="validate()"/>
+	<mx:Label x="150" y="47" width="76" height="25" fontSize="12" fontWeight="bold" text="号码："
+			  textAlign="right"/>
+	<mx:TextInput id="contractNumberInput" x="227" y="47" width="200" height="25" change="validate()"
+				  editable="false" tabIndex="2"/>
+	
+	<mx:Button id="updateButton" x="326" y="7" width="66" label="更新" fontSize="12" tabIndex="7"/>
+	<mx:Button id="closeBtn" x="527" y="7" width="66" label="取消" fontSize="12" tabIndex="8"/>
+	
+	<mx:RemoteObject id="commonObjectQuery" destination="CommonObjectQuery"/>
+	<mx:Button id="updateAndCloseButton" x="400" y="7" width="119" label="更新并关闭" fontSize="12"
+			   tabIndex="7"/>
+	<mx:Label x="475" y="46" width="118" height="25" fontSize="12" fontWeight="bold" text="到量支付上限："
+			  textAlign="right"/>
+	<mx:TextInput x="611" y="46" width="130" id="volumnBaseLineInput" tabIndex="2" height="25" change="validate()"/>
+	<mx:ComboBox id="uomComboxBox" x="749" y="46" width="88" editable="true" labelField="name"></mx:ComboBox>
+	<mx:Label x="475" y="78" width="118" height="25" fontSize="12" fontWeight="bold" text="到期支付上限："
+			  textAlign="right"/>
+	<mx:TextInput x="611" y="78" width="130" id="periodBaseLineInput" tabIndex="2" height="25" change="validate()"/>
+	<mx:ComboBox id="periodComboBox" x="749" y="78" width="88" editable="true"></mx:ComboBox>
+	<mx:Label x="128" y="110" width="100" height="25" fontSize="12" fontWeight="bold" text="收票方账户："
+			  textAlign="right"/>
+	<mx:ComboBox id="bill2AccountComboBox" x="227" y="110" width="200" editable="true" labelField ="name"></mx:ComboBox>
+	<mx:Label x="128" y="143" width="100" height="25" fontSize="12" fontWeight="bold" text="收货方账户："
+			  textAlign="right"/>
+	<mx:ComboBox id="ship2AccountComboBox" x="227" y="143" width="200" editable="true" labelField ="name"></mx:ComboBox>
+	<mx:Label x="128" y="176" width="100" height="25" fontSize="12" fontWeight="bold" text="买方账户："
+			  textAlign="right"/>
+	<mx:ComboBox id="sold2AccountComboBox" x="227" y="176" width="200" editable="true" labelField ="name"></mx:ComboBox>
+	<mx:Label x="128" y="210" width="100" height="25" fontSize="12" fontWeight="bold" text="付款方账户："
+			  textAlign="right"/>
+	<mx:ComboBox id="payerAccountComboBox" x="227" y="210" width="200" editable="true" labelField ="name"></mx:ComboBox>
+	<mx:Label x="475" y="110" width="118" height="25" fontSize="12" fontWeight="bold" text="付款期限："
+			  textAlign="right"/>
+	<mx:ComboBox id="paymentTermComboxBox" x="611" y="110" width="130" editable="true"></mx:ComboBox>
+	<mx:DateField id="effectiveDateField" x="612" y="140" width="129"/>
+	<mx:DateField id="startDateField" x="612" y="176" width="128"/>
+	<mx:DateField id="endDateField" x="612" y="207" width="128"/>
+	<mx:Label x="475" y="210" width="119" height="25" fontSize="12" fontWeight="bold" text="合同终止日期："
+			  textAlign="right"/>
+	<mx:Label x="475" y="176" width="119" height="25" fontSize="12" fontWeight="bold" text="合同履行日期："
+			  textAlign="right"/>
+	<mx:Label x="475" y="143" width="119" height="25" fontSize="12" fontWeight="bold" text="合同生效日期："
+			  textAlign="right"/>
+	<mx:TabNavigator x="21" y="255" width="908" height="360" fontSize="12">
+		<mx:VBox width="100%" height="100%" label="单位工程" fontSize="12">
+			<components:ActionTable id="unitOfProjectTable" width="100%" height="100%"  creationComplete="onUnitOfProjectTableCreated(event)"/>
+		</mx:VBox>
+		<mx:VBox width="100%" height="100%" label="合同价格" fontSize="12">
+			<components:ActionTable id="priceTable" width="100%" height="100%" creationComplete="onPriceTableCreated(event)" />
+		</mx:VBox>
+		<mx:VBox width="100%" height="100%" label="联系人" fontSize="12" >
+			<components:ActionTable id="contactTable" width="100%" height="100%" creationComplete="onContactTableCreated(event)"/>
+		</mx:VBox>
+	</mx:TabNavigator>
+	<mx:RemoteObject id="contractQueryServer" destination="Contract"/>
+	<mx:RemoteObject id="contractServer" destination="Contract"/>
+	<mx:RemoteObject id="unitOfProjectQueryServer" destination="Contract"/>
+	<mx:RemoteObject id="unitOfProjectServer" destination="Contract"/>
+	<mx:RemoteObject id="contractRatePlanComponentQueryServer" destination="Contract"/>
+	<mx:RemoteObject id="contractRatePlanComponentServer" destination="Contract"/>
+	<mx:RemoteObject id="commonQueryServer" destination="CommonObjectQuery"/>
+	<mx:RemoteObject id="accountQueryServer" destination="Account"/>
+	<mx:RemoteObject id="accountServer" destination="Account"/>
+</mx:Panel>

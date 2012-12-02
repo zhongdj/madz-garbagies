@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<service id="remoting-service" class="flex.messaging.services.RemotingService">
+	<adapters>
+		<adapter-definition id="java-object"
+			class="flex.messaging.services.remoting.adapters.JavaAdapter"
+			default="true" />
+	</adapters>
+	<default-channels>
+		<channel ref="my-amf" />
+	</default-channels><!-- <default-security-constraint ref="jshop-users"/> -->
+	<destination id="CommonObject">
+		<properties>
+			<source>net.madz.flex.proxy.common.CommonObjectProxy</source>
+		</properties>
+		<security>
+			<security-constraint ref="jshop-users" />
+		</security>
+	</destination>
+	<destination id="CommonObjectQuery">
+		<properties>
+			<source>net.madz.flex.proxy.common.CommonObjectQueryProxy</source>
+		</properties>
+		<security>
+			<security-constraint ref="jshop-users" />
+		</security>
+	</destination>
+
+	<!--For Inventory Management Beginning -->
+	<destination id="Account">
+		<properties>
+			<source>net.madz.flex.proxy.account.AccountProxy</source>
+		</properties>
+		<security>
+			<security-constraint ref="jshop-users" />
+		</security>
+	</destination>
+
+
+
+	<destination id="Production">
+		<properties>
+			<source>net.madz.flex.proxy.production.ProductionProxy</source>
+		</properties>
+		<security>
+			<security-constraint ref="jshop-users" />
+		</security>
+	</destination>
+
+
+	<destination id="Register">
+		<properties>
+			<source>net.madz.flex.proxy.security.RegisterProxy</source>
+		</properties>
+	</destination>
+	<destination id="Security">
+		<properties>
+			<source>net.madz.flex.proxy.security.SecurityProxy</source>
+		</properties>
+		<security>
+			<security-constraint ref="jshop-users" />
+		</security>
+	</destination>
+	<destination id="UI">
+		<properties>
+			<source>net.madz.flex.proxy.ui.UIProxy</source>
+		</properties>
+		<security>
+			<security-constraint ref="jshop-users" />
+		</security>
+	</destination>
+	<destination id="UIQuery">
+		<properties>
+			<source>net.madz.flex.proxy.ui.UIQueryProxy</source>
+		</properties>
+		<security>
+			<security-constraint ref="jshop-users" />
+		</security>
+	</destination>
+	<destination id="Contract">
+		<properties>
+			<source>net.madz.flex.proxy.contract.ContractProxy</source>
+		</properties>
+		<security>
+			<security-constraint ref="jshop-users" />
+		</security>
+	</destination>
+	<destination id="Billing">
+		<properties>
+			<source>net.madz.flex.proxy.billing.BillingProxy</source>
+		</properties>
+		<security>
+			<security-constraint ref="jshop-users" />
+		</security>
+	</destination>
+	<destination id="ETL">
+		<properties>
+			<source>net.madz.flex.proxy.etl.ETLWebProxy</source>
+		</properties>
+		<security>
+			<security-constraint ref="jshop-users" />
+		</security>
+	</destination>
+	<destination id="TestObject">
+		<properties>
+			<source>net.madz.flex.proxy.test.CommonObjectProxy</source>
+		</properties>
+		<security>
+			<security-constraint ref="jshop-users" />
+		</security>
+	</destination>
+	<destination id="Accounting">
+		<properties>
+			<source>net.madz.flex.proxy.pr2invoice.ProductionRecord2InvoiceProxy</source>
+		</properties>
+		<security>
+			<security-constraint ref="jshop-users" />
+		</security>
+	</destination>
+</service>

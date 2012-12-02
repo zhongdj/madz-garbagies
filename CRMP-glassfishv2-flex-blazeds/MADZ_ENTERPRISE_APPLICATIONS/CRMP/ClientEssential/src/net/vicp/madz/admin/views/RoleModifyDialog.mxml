@@ -1,0 +1,404 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml"
+		  xmlns:navigators="net.vicp.madz.framework.views.navigators.*"
+		  width="716" height="636" creationComplete="onCreateComplete(event);" fontSize="12"
+		  layout="absolute" title="角色授权视图" >
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.ArrayCollection;
+			import mx.controls.List;
+			import mx.events.FlexEvent;
+			import mx.events.ListEvent;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			import net.vicp.madz.admin.vo.RoleTO;
+			import net.vicp.madz.components.adapter.TreeNode;
+			import net.vicp.madz.components.adapter.TreeNodeDataDescriptor;
+			
+			private var role : RoleTO;
+			
+			private var partialItemArray:ArrayCollection = new ArrayCollection();
+			private var allItemArray:ArrayCollection = new ArrayCollection();
+			
+			private var partialMap:Dictionary = new Dictionary();
+			private var allMap:Dictionary = new Dictionary();
+			private var modelMap:Dictionary = new Dictionary();
+			
+			private var owningTreeRoots : ArrayCollection = new ArrayCollection();
+			private var otherTreeRoots : ArrayCollection = new ArrayCollection();
+			
+			private var _labelField : String;
+			private var _idField : String;
+			private var _parentIdField : String;
+			
+			private function onCreateComplete(event:FlexEvent):void {
+				server.addEventListener(ResultEvent.RESULT,onFetch);
+			}
+			
+			public function setRole(roleTO:RoleTO) : void {
+				if (null == roleTO) {
+					return;
+				}
+				
+				this.role = roleTO;
+				
+				idInput.text = role.id;
+				menuItemNameInput.text = roleTO.name;
+				partialItemArray.removeAll();
+				
+				for (var i:int = 0; i < roleTO.menuItems.length; i ++) {
+                    partialItemArray.addItem(roleTO.menuItems[i]);				
+				}
+				populateTreeNodes(partialItemArray, owningTree, owningTreeRoots, partialMap);
+			}
+			
+			public function reset():void{
+				if (null != menuItemNameInput) {
+					menuItemNameInput.text = "";
+				}
+				this.role = null;
+				
+				addedIds.removeAll();
+				removedIds.removeAll();
+				
+				partialItemArray.removeAll();
+				allItemArray.removeAll();
+				partialMap = new Dictionary();
+				allMap = new Dictionary();
+				modelMap = new Dictionary();
+				
+				owningTreeRoots.removeAll();
+				otherTreeRoots.removeAll();
+				
+				_labelField = null;
+				_idField = null;
+				_parentIdField = null;
+				
+				server.findAllMenuItem();
+
+			}
+			
+			private function onFetch(event:ResultEvent) : void {
+				if (null != event.result) {
+					allItemArray = event.result as ArrayCollection;
+					populateModelMap(allItemArray, modelMap);
+					
+					var otherItemArray : ArrayCollection = calculateDifferenceSet(allItemArray, partialItemArray);
+				    populateTreeNodes(otherItemArray, otherTree, otherTreeRoots, allMap);
+				}
+			}
+			
+			private function calculateDifferenceSet(fullItemArray : ArrayCollection, partialArray : ArrayCollection) : ArrayCollection {
+				var copy : ArrayCollection = new ArrayCollection();
+				copy.addAll(fullItemArray);
+				
+				
+				var map : Dictionary = new Dictionary();
+				fullItemArray.removeAll();
+				
+				var treeNode : TreeNode = null;
+				for (var i:int =0; i < copy.length; i ++) {
+					treeNode = new TreeNode(copy[i], "name");
+					map[copy[i]["id"]] = treeNode;
+					fullItemArray.addItem(treeNode);
+				}
+				
+				var id : String = null;
+				var parentId : String = null;
+				for (var i:int =0; i < copy.length; i ++) {
+					parentId =  copy[i]["parentMenuItemId"];
+					id = copy[i]["id"];
+					if (null == parentId) {
+						continue;
+					} else {
+						(map[parentId] as TreeNode).addChild(map[id]);
+					}
+				}
+				
+				var deletingArray : ArrayCollection = new ArrayCollection();
+				
+				var node : TreeNode = null;
+				for (var i : int = 0; i < fullItemArray.length; i ++) {
+				    node = fullItemArray[i] as TreeNode;
+					var deleteFlag : Boolean = true;
+					if (node.hasChildren()) {
+						for (var j : int = 0; j < node.getChildren().length; j ++) {
+							if (-1 == containsNode(partialArray, node.getChildren()[j])) {
+								deleteFlag = false;
+							}
+						}
+						if (deleteFlag) {
+							deletingArray.addItem(node);
+						}
+					} else {
+				        if (0 <= containsNode(partialArray, node)) {
+							deletingArray.addItem(node);
+						}
+					}
+				}
+				
+				for (var k : int = 0; k < deletingArray.length ; k ++) {
+					var index:int = containsNode(copy, deletingArray.getItemAt(k) as TreeNode);
+					if (0 <= index) {
+					    copy.removeItemAt(index);
+					}
+				}
+				
+				return copy;
+			}
+			
+            private function containsNode(itemArray : ArrayCollection, node : TreeNode) : int {
+				for (var i : int = 0; i < itemArray.length; i ++) {
+					if (itemArray[i]["name"] == node.label) {
+						return i;
+					}
+				}
+				return -1;
+			}
+			
+			public function get labelField() : String {
+				return this._labelField;
+			}
+			
+			public function set labelField(labelField : String) :void {
+				this._labelField = labelField;
+			}
+			
+			public function get idField() : String {
+				return this._idField;
+			}
+			
+			public function set idField(idField : String) : void {
+				this._idField = idField;
+			}
+			
+			public function get parentIdField() : String {
+				return this._parentIdField;
+			}
+			
+			public function set parentIdField(parentIdField : String) : void {
+				this._parentIdField = parentIdField;	
+			}
+			
+			protected function initializedHandler(event:FlexEvent):void
+			{
+				
+			}
+			
+			protected function creationCompleteHandler(event:FlexEvent):void
+			{
+				
+				
+			}
+			
+			protected function populateTreeNodes(model:ArrayCollection, targetTree : Tree, rootNodes : ArrayCollection, map : Dictionary) : void {
+				var treeNode : TreeNode = null;
+				for (var i:int =0; i < model.length; i ++) {
+					treeNode = new TreeNode(model[i], "name");
+					map[model[i]["id"]] = treeNode;
+					if (null == model[i]["parentMenuItemId"]) {
+						rootNodes.addItem(treeNode);
+					}
+				}
+				
+				var id : String = null;
+				var parentId : String = null;
+				for (var i:int =0; i < model.length; i ++) {
+					parentId =  model[i]["parentMenuItemId"];
+					id = model[i]["id"];
+					if (null == parentId) {
+						continue;
+					} else {
+						(map[parentId] as TreeNode).addChild(map[id]);
+					}
+				}
+				
+				targetTree.dataDescriptor = new TreeNodeDataDescriptor();
+				targetTree.dataProvider = rootNodes;
+			}
+			
+			protected function populateModelMap(model:ArrayCollection, map : Dictionary) : void {
+				for (var i:int =0; i < model.length; i ++) {
+					map[model[i]["id"]] = model[i];
+				}
+			}
+			
+			private var addedIds : ArrayCollection = new ArrayCollection();
+			private var removedIds : ArrayCollection = new ArrayCollection();
+			
+			protected function removeButtonDownHandler(event:FlexEvent):void
+			{
+				var selectedNodes : Array = owningTree.selectedItems;
+				var removed : ArrayCollection = removeNodeFromTree(selectedNodes, owningTree, partialMap);
+				
+				for (var i : int = 0; i < removed.length; i ++) {
+				
+					if (!addedIds.contains(removed[i])) {
+				        removedIds.addItem(removed[i]);
+					} else {
+						var index : int = addedIds.getItemIndex(removed[i]);  
+						if (0 <= index) {
+						    addedIds.removeItemAt(index);
+						}
+					}
+				}
+				
+				
+				addNodeToTree(selectedNodes, otherTree, allMap);
+				
+			}
+			
+			protected function addButtonDownHandler(event:FlexEvent):void
+			{
+				var selectedNodes : Array = otherTree.selectedItems;
+				var added : ArrayCollection = addNodeToTree(selectedNodes, owningTree, partialMap);
+				
+				for (var i : int = 0; i < added.length; i ++) {
+					
+					if (!removedIds.contains(added[i])) {
+						addedIds.addItem(added[i]);
+					} else {
+						var index : int = removedIds.getItemIndex(added[i]);  
+						if (0 <= index) {
+							removedIds.removeItemAt(index);
+						}
+					}
+				}
+				
+				removeNodeFromTree(selectedNodes, otherTree, allMap);
+				
+			}
+			
+			protected function removeNodeFromTree(selectedNodes : Array, owningTree : Tree, nodeMap : Dictionary) : ArrayCollection 
+			{
+				var removed:ArrayCollection = new ArrayCollection();
+				
+				var roots : ArrayCollection =  owningTree.dataProvider as ArrayCollection;
+				var toDelete : ArrayCollection = new ArrayCollection();
+				if (selectedNodes) {
+					var node: TreeNode = null;
+					for (var i:int = 0; i < selectedNodes.length; i ++) {
+						node = selectedNodes[i] as TreeNode;
+						if (null == node.getData()["parentMenuItemId"]) {
+							
+							for (var j:int = 0; j < roots.length; j ++) {
+								if (roots[j].getData()["id"] == node.getData()["id"]) {
+									nodeMap[node.getData()["id"]] = null;
+									toDelete.addItem(j);
+									removed.addItem(node.getData()["id"]);
+								}
+							}
+							
+							for (var k: int = 0; k < toDelete.length; k ++) {
+								roots.removeItemAt(toDelete[k]);
+							}
+						} else {
+							var parentNode : TreeNode = nodeMap[node.getData().parentMenuItemId];
+							if (null != parentNode) {
+								//父节点刚刚被移除
+							    parentNode.removeChild(nodeMap[node.getData()["id"]]);
+							}
+							nodeMap[node.getData()["id"]] = null;
+							removed.addItem(node.getData()["id"]);
+						}
+						
+						if (node.hasChildren()) {
+							var subRemoved : ArrayCollection = removeNodeFromTree(node.getChildren().toArray(), owningTree, nodeMap);
+							removed.addAll(subRemoved);
+						}
+					}
+				}
+				return removed;
+			}
+			
+			protected function addNodeToTree(selectedNodes : Array, owningTree : Tree, nodeMap : Dictionary) : ArrayCollection 
+			{
+				var added : ArrayCollection = new ArrayCollection();
+				
+				var roots : ArrayCollection =  owningTree.dataProvider as ArrayCollection;
+				var toDelete : ArrayCollection = new ArrayCollection();
+				if (selectedNodes) {
+					var node: TreeNode = null;
+					for (var i:int = 0; i < selectedNodes.length; i ++) {
+						node = selectedNodes[i] as TreeNode;
+						var targetNode : TreeNode = nodeMap[node.getData()["id"]];
+						if (null == targetNode) {
+							targetNode = new TreeNode(modelMap[node.getData()["id"]], "name");
+							nodeMap[node.getData()["id"]] = targetNode;
+							if (null == node.getData()["parentMenuItemId"]) {
+								var rootNodes : ArrayCollection = owningTree.dataProvider as ArrayCollection;
+								var exists : Boolean = false;
+								for (var j:int = 0; j < rootNodes.length; j ++) {
+									if ((rootNodes[j] as TreeNode).getData()["id"] == targetNode.getData()["id"]) {
+										exists = true;
+									}
+								}
+								if (!exists) {
+								    rootNodes.addItem(targetNode);
+								    added.addItem(targetNode.getData()["id"]);
+								}
+							} else {
+								var parentNode : TreeNode = nodeMap[node.getData().parentMenuItemId];
+								if (null == parentNode) {
+									var parent : Array = new Array();
+									parent.push(new TreeNode(modelMap[node.getData().parentMenuItemId], "name"));
+									var subAdded : ArrayCollection = addNodeToTree(parent, owningTree, nodeMap);
+									added.addAll(subAdded);
+								} 
+								parentNode = nodeMap[node.getData().parentMenuItemId];
+								if (parentNode.addChild(targetNode)) {
+								    added.addItem(targetNode.getData()["id"]);
+								}
+							}
+						}
+						
+						
+						if (node.hasChildren()) {
+							var subAdded : ArrayCollection = addNodeToTree(node.getChildren().toArray(), owningTree, nodeMap);
+							added.addAll(subAdded);
+						}
+					}
+				}
+				return added;
+			}
+			
+			public function getRemovedIds() : ArrayCollection {
+				var removedIdResult : ArrayCollection = new ArrayCollection();
+				removedIdResult.addAll(removedIds);
+				return removedIdResult;
+			}
+			
+			public function getAddedIds() : ArrayCollection {
+				var addedIdResult : ArrayCollection = new ArrayCollection();
+				addedIdResult.addAll(addedIds);
+				return addedIdResult;
+			}
+			
+			public function getRole():RoleTO
+			{
+				return role;
+			}
+			
+		]]>
+	</mx:Script>
+	<mx:Label x="18" y="46" width="122" fontWeight="bold" text="角色名称:" textAlign="right"/>
+	<mx:TextInput id="menuItemNameInput" x="148" y="44" width="211" editable="false"/>
+	<mx:Label x="18" y="8" width="122" fontWeight="bold" text="标识:" textAlign="right"/>
+	<mx:TextInput id="idInput" x="148" y="6" width="211" editable="false"/>
+	<mx:Button id="updateButton" x="590" y="6" width="95" label="更新"/>
+	<mx:Button id="updateAndCloseButton" x="386" y="6" width="95" label="更新并关闭"
+			   />
+	<mx:Button id="closeButton" x="489" y="6" width="93" label="关闭"/>
+	<mx:RemoteObject id="server" destination="UI"/>
+	<mx:Tree id="owningTree" x="37" y="115" width="254" height="469">
+	</mx:Tree>
+	<mx:Tree id="otherTree" x="401" y="115" width="259" height="469">
+	</mx:Tree>
+	<mx:Label x="37" y="84" width="103" text="已有功能"/>
+	<mx:Label x="401" y="84" width="96" text="其他功能"/>
+	<mx:Button id="removeButton" x="308" y="281" label="移除 --》"
+			   buttonDown="removeButtonDownHandler(event)" fontSize="12"/>
+	<mx:Button id="addButton" x="308" y="345" width="81" label="《--添加"
+			   buttonDown="addButtonDownHandler(event)" fontSize="12"/>
+</mx:Panel>

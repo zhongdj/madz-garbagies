@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml"
+		  width="720" height="458" creationComplete="onCreateComplete(event);" fontSize="12"
+		  layout="absolute" title="更改生产记录">
+	
+	
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.ArrayCollection;
+			import mx.collections.ArrayList;
+			import mx.events.FlexEvent;
+			import mx.events.ListEvent;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			import net.vicp.madz.production.vo.*;
+			import net.vicp.madz.utils.SelectUtils;
+			
+			private var productionRecord :ProductionRecordTO;
+			private var tableIndex : int; 
+			
+			[Bindable]
+			private var unitOfProjects : Array;
+			[Bindable]
+			private var projects: Array;
+			[Bindable]
+			private var plants: Array;
+			[Bindable]
+			private var accounts: Array;
+			[Bindable]
+			private var parts: Array;
+			
+			public function setProductionRecord(item:ProductionRecordTO, index : int) : void {
+				
+				
+				if (null == item) {
+					return;
+				}
+				
+				this.tableIndex = index;
+				
+				this.productionRecord = item;
+				
+				idInput.text = item.id;
+				productionTimeDateField.selectedDate = item.productionTime;
+				outputVolumnInput.text = item.quantity + "";
+				truckNumberInput.text = item.truckNumber;
+				referenceNumberInput.text = item.referenceNumber;
+				billedCheckBox.selected = item.billed;
+				rawDescriptionText.text = item.description;
+				
+				contractServer.addEventListener(ResultEvent.RESULT, onUnitOfProjectFetched);
+				contractServer.findUnitOfProjects();
+				//TODO uomComboBox, unitOfProjectComboBox,unitOfProjectOwnerComboBox,
+				if (null != this.unitOfProjectComboBox && null != unitOfProjects) {
+					var selected:Object = SelectUtils.getSelectedItem(this.productionRecord.id, unitOfProjects);
+					unitOfProjectComboBox.selectedItem = selected;
+				}
+				//TODO projectOwnerComboBox,plantComboBox
+			}
+			
+			public function reset():void{
+				
+				productionRecord = null;
+			}
+			
+			public function onCreateComplete(event:FlexEvent):void {
+				
+			}
+			
+			private function onFetch(event:ResultEvent) : void {
+			}
+			
+			protected function onUnitOfProjectFetched(event:ResultEvent):void
+			{
+				if (event.result is ArrayCollection) {
+					this.unitOfProjects = (event.result as ArrayCollection).toArray();
+				} else if (event.result is Array) {
+					this.unitOfProjects = event.result as Array;
+				}
+				
+				if (null != unitOfProjectComboBox) {
+					unitOfProjectComboBox.dataProvider = this.unitOfProjects;
+					if (null != this.productionRecord) {
+						var selected:Object = SelectUtils.getSelectedItem(this.productionRecord.unitOfProjectId, unitOfProjects);
+						unitOfProjectComboBox.selectedItem = selected;
+					}
+				}
+			}
+			
+			protected function unitOfProjectComboBox_creationCompleteHandler(event:FlexEvent):void
+			{
+				if (null != unitOfProjects) {
+				    unitOfProjectComboBox.dataProvider = unitOfProjects;	
+				    if (null != this.productionRecord) {
+						var selected:Object = SelectUtils.getSelectedItem(this.productionRecord.id, unitOfProjects);
+						unitOfProjectComboBox.selectedItem = selected;
+					}
+				}
+				
+			}
+			
+			public function getProductionRecord():ProductionRecordTO
+			{
+				return this.productionRecord;
+			}
+			
+			public function getTableIndex() : int 
+			{
+				return this.tableIndex;
+			}
+			
+		]]>
+	</mx:Script>
+	
+	<mx:Label id="idLabel" x="6" y="13" width="89" fontWeight="bold" text="标识:" textAlign="right"/>
+	<mx:TextInput id="idInput" x="103" y="11" width="211" editable="false"/>
+
+	<mx:Label id="productionTimeLabel" x="7" y="49" width="89" fontWeight="bold" text="生产时间:" textAlign="right"/>
+	<mx:DateField id="productionTimeDateField" x="103" y="47" width="211" height="29"/>
+	
+	<mx:Label id="outputVolumnLabel" x="6" y="87" width="89" fontWeight="bold" text="输出量:" textAlign="right"/>
+	<mx:TextInput id="outputVolumnInput" x="103" y="85" width="211" editable="true"/>
+	
+	<mx:Label id="truckNumberLabel" x="6" y="162" width="89" fontWeight="bold" text="卡车号码:" textAlign="right"/>
+	<mx:TextInput id="truckNumberInput" x="103" y="160" width="211" editable="true"/>
+	
+	<mx:Label id="uomLabel" x="6" y="125" width="89" fontWeight="bold" text="计量单位:" textAlign="right"/>
+	<mx:ComboBox id="uomComboBox" x="103" y="123" width="211" editable="false"></mx:ComboBox>
+	
+	<mx:Label id="unitOfProjectLabel" x="353" y="12" width="89" fontWeight="bold" text="单位工程:" textAlign="right"/>
+	<mx:ComboBox id="unitOfProjectComboBox" x="450" y="10" width="211" editable="false" labelField="name" creationComplete="unitOfProjectComboBox_creationCompleteHandler(event)"></mx:ComboBox>
+	
+	<mx:Label id="unitOfProjectOwnerLabel" x="353" y="50" width="89" fontWeight="bold" text="施工单位:" textAlign="right"/>
+	<mx:ComboBox id="unitOfProjectOwnerComboBox" x="450" y="48" width="211" editable="false"></mx:ComboBox>
+	
+	<mx:Label id="projectOwnerLabel" x="353" y="123" width="89" fontWeight="bold" text="工程单位:" textAlign="right"/>
+	<mx:ComboBox id="projectOwnerComboBox" x="450" y="121" width="211" editable="false"></mx:ComboBox>
+	
+	<mx:Label id="plantLabel" x="353" y="162" width="89" fontWeight="bold" text="搅拌站名称:" textAlign="right"/>
+	<mx:ComboBox id="plantComboBox" x="450" y="160" width="211" editable="false"></mx:ComboBox>
+	
+	<mx:Label id="partLabel" x="353" y="202" width="89" fontWeight="bold" text="浇筑部位:" textAlign="right"/>
+	<mx:ComboBox id="partComboBox" x="450" y="200" width="211" editable="false"></mx:ComboBox>
+	
+	<mx:Label id="projectLabel" x="353" y="86" width="89" fontWeight="bold" text="工程名称:" textAlign="right"/>
+	<mx:ComboBox id="projectComboBox" x="450" y="86" width="211" editable="false"></mx:ComboBox>
+	
+	<mx:Label id="referenceNumberLabel" x="6" y="202" width="89" fontWeight="bold" text="参考号码:" textAlign="right"/>
+	<mx:Label id="referenceNumberLabel0" x="6" y="269" width="89" fontWeight="bold" text="原始描述:" textAlign="right"/>
+	<mx:TextInput id="referenceNumberInput" x="103" y="200" width="211" editable="true"/>
+
+	<mx:CheckBox id="billedCheckBox" x="26" y="236" label="已生成账单" enabled="false"/>
+
+	<mx:TextArea id="rawDescriptionText" x="103" y="268" width="558" height="97"/>
+	
+	<mx:Button id="updateButton" x="362" y="382" width="95" label="更新"/>
+	<mx:Button id="updateAndCloseButton" x="465" y="382" width="95" label="更新并关闭"/>
+	<mx:Button id="closeButton" x="568" y="382" width="93" label="关闭"/>
+	
+	<mx:RemoteObject id="contractServer" destination="Contract"/>
+	
+</mx:Panel>

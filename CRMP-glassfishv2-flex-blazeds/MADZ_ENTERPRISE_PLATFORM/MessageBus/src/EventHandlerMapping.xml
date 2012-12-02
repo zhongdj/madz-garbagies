@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Document : EventHandlerMapping.xml Created on : 2008年8月30日, 下午2:59 Author 
+	: Barry Description: When server receives following Events, system acts as 
+	follows. -->
+<Events>
+	<Event type="net.vicp.madz.infra.service.event.ApplicationServiceEvent">
+		<Handlers>
+			<Handler
+				type="net.vicp.madz.infra.service.handler.ApplicationServiceEventHandler" />
+		</Handlers>
+	</Event>
+	<Event
+		type="net.vicp.madz.infra.security.messaging.event.outbound.TenantLogEvent">
+		<Handlers>
+			<Handler
+				type="net.vicp.madz.infra.security.messaging.handler.TenantLogEventHandler" />
+		</Handlers>
+	</Event>
+</Events>

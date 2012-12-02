@@ -1,0 +1,54 @@
+<project name="JSHOP-SYSTEM" default="jar">
+	<property name="jar.file.name" value="crmp.ear" />
+	<property name="root.dir" value="../../../" />
+	<property file="../Build/build.properties" />
+	<property file="../../../MADZ_BUILD/build.properties" />
+
+	<target name="delete-dist">
+		<delete dir="dist" quiet="true" />
+	</target>
+
+	<target name="clean">
+		<delete dir="dist" quiet="true" />
+		<mkdir dir="dist/classes" />
+		<mkdir dir="dist/classes/META-INF" />
+		<mkdir dir="dist/classes/lib" />
+	</target>
+
+	<target name="copy-meta" depends="clean">
+		<copy todir="dist/classes/META-INF">
+			<fileset dir="src/conf" includes="*.xml" />
+			<fileset dir="src/conf" includes="*.MF" />
+		</copy>
+	</target>
+
+	<target name="copy-comp" depends="clean">
+		<copy todir="dist/classes/">
+			<fileset dir="../${dist.comp.home}" includes="*.*" />
+		</copy>
+	</target>
+	<target name="copy-modules" depends="clean">
+		<copy todir="dist/classes/">
+			<fileset dir="../../../${dist.modules.home}" includes="*.*" />
+		</copy>
+	</target>
+
+	<target name="copy-lib" depends="clean">
+		<copy todir="dist/classes/lib/">
+			<fileset dir="../${dist.lib.home}" includes="*.*" />
+		</copy>
+		<copy todir="dist/classes/lib/">
+			<fileset dir="${root.dir}/${dist.platform.home}" includes="*.*" />
+		</copy>
+
+	</target>
+
+	<target name="jar" depends="copy-meta, copy-comp, copy-modules, copy-lib">
+		<jar compress="true" jarfile="dist/${jar.file.name}" basedir="dist/classes" />
+		<copy todir="${root.dir}/${dist.applications.home}">
+			<fileset dir="dist/" includes="${jar.file.name}" />
+		</copy>
+	</target>
+
+	<target name="report" depends="jar"/>
+</project>

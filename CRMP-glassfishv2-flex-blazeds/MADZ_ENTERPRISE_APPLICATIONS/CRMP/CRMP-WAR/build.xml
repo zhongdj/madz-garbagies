@@ -1,0 +1,69 @@
+<project name="JSHOP-WAR-Module" default="jar">
+	<property name="jar.file.name" value="crmp-web.war" />
+	<property file="../Build/build.properties" />
+	<property name="root.dir" value="../../../" />
+
+	<path id="build.classpath">
+		<fileset dir="${root.dir}/${3rd-party.home}">
+			<include name="**/*.jar" />
+		</fileset>
+		<fileset dir="${root.dir}/${dist.platform.home}">
+			<include name="**/*.jar" />
+		</fileset>
+		<fileset dir="${root.dir}/${dist.modules.home}">
+			<include name="**/*.jar" />
+		</fileset>
+		<fileset dir="../Build/dist">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+
+	<target name="delete-dist">
+		<delete dir="dist" quiet="true" />
+		<delete dir="bin" quiet="true" />
+	</target>
+
+	<target name="clean">
+		<delete dir="dist" quiet="true" />
+		<mkdir dir="dist/classes" />
+	</target>
+
+	<target name="copy-web" depends="clean">
+		<copy todir="dist/">
+			<!-- <fileset dir="D:\Runtime\glassfish\domains\domain1\applications\j2ee-apps\crmp\crmp-web_war" 
+				includes="**/*.*" /> -->
+			<fileset dir="web" includes="**/*.*" />
+		</copy>
+	</target>
+
+	<target name="compile" depends="copy-web">
+		<javac debug="true" srcdir="src" destdir="dist/WEB-INF/classes"
+			classpathref="build.classpath" />
+	</target>
+
+	<target name="copy-meta" depends="clean, compile">
+		<copy todir="dist/classes/WEB-INF">
+			<fileset dir="src/conf" includes="*.xml" />
+		</copy>
+		<copy todir="dist/classes/META-INF">
+			<fileset dir="src/conf" includes="*.MF" />
+		</copy>
+	</target>
+
+	<target name="jar" depends="copy-meta">
+		<jar compress="true" jarfile="dist/${jar.file.name}" basedir="dist" />
+		<copy todir="../${dist.comp.home}">
+			<fileset dir="dist/" includes="${jar.file.name}" />
+		</copy>
+	</target>
+
+	<target name="findBugs" depends="jar">
+		<findbugs home="${root.dir}/${findbugs.home}" classpathref="build.classpath"
+			output="xml" outputFile="dist/findbugs.xml">
+			<sourcePath path="src" />
+			<class location="${default.target.dir}/${jar.file.name}" />
+		</findbugs>
+	</target>
+
+	<target name="report" depends="jar, findBugs" />
+</project>

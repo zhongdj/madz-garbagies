@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml"
+		  width="384" height="256" creationComplete="onCreateComplete(event);" fontSize="14"
+		  layout="absolute" title="新增种类">
+<mx:Script>
+	<![CDATA[
+		import mx.events.FlexEvent;
+		import mx.rpc.events.FaultEvent;
+		import mx.rpc.events.ResultEvent;
+		import mx.collections.ArrayCollection;
+		
+		private function onCreateComplete(event:FlexEvent):void{
+            reset();
+            this.addEventListener(FlexEvent.SHOW,onShow);
+		}
+		
+		private function onShow(event:FlexEvent) : void {
+			trace("onShow");
+		}
+		
+		
+		private function onCategoryFault(event:FaultEvent):void{
+			
+		}
+		
+		public function reset() : void {
+			this.nameInput.text = "";
+			this.descriptionInput.text = "";
+		}
+	]]>
+</mx:Script>
+	<mx:Label x="24" y="47" text="种类名称:" width="104"/>
+	<mx:TextInput x="136" y="45" width="200" id="nameInput"/>
+	<mx:Label x="24" y="75" text="描述:" width="104" textAlign="left"/>
+	<mx:TextInput x="136" y="73" width="200" id="descriptionInput"/>
+	<mx:Button x="24" y="148" label="创建" id="createButton" width="104" fontSize="12"/>
+	<mx:Button x="183" y="148" label="关闭" id="closeBtn" width="113" fontSize="12"/>
+	<mx:RemoteObject id="commonObjectQuery" destination="CommonObjectQuery"/>
+</mx:Panel>

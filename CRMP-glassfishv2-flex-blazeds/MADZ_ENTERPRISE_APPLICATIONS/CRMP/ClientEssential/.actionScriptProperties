@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<actionScriptProperties analytics="false" mainApplicationPath="ClientEssential.mxml" projectUUID="e724b516-6393-470c-acc6-f21821b9ed4d" version="10">
+  <compiler additionalCompilerArguments="-services &quot;Z:\crmp\crmp-web_war\WEB-INF\flex\services-config.xml&quot; -locale en_US -dump-config=c:/test/myconf.xml" autoRSLOrdering="true" copyDependentFiles="true" flex3CompatMode="true" fteInMXComponents="false" generateAccessible="true" htmlExpressInstall="true" htmlGenerate="true" htmlHistoryManagement="true" htmlPlayerVersionCheck="true" includeNetmonSwc="false" outputFolderLocation="Z:/crmp/crmp-web_war" outputFolderPath="bin-debug" removeUnusedRSL="true" rootURL="" sourceFolderPath="src" strict="true" targetPlayerVersion="0.0.0" useApolloConfig="false" useDebugRSLSwfs="true" verifyDigests="true" warn="true">
+    <compilerSourcePath/>
+    <libraryPath defaultLinkType="1">
+      <libraryPathEntry kind="4" path=""/>
+      <libraryPathEntry kind="1" linkType="1" path="libs"/>
+      <libraryPathEntry kind="3" linkType="1" path="libs/PureMVC_AS3_2_0_4.swc" useDefaultLinkType="false"/>
+      <libraryPathEntry kind="3" linkType="1" path="libs/flexlib.swc" useDefaultLinkType="false"/>
+    </libraryPath>
+    <sourceAttachmentPath/>
+  </compiler>
+  <applications>
+    <application path="ClientEssential.mxml"/>
+  </applications>
+  <modules>
+    <module application="src/ClientEssential.mxml" destPath="net/vicp/madz/admin/views/RoleView.swf" optimize="true" sourcePath="src/net/vicp/madz/admin/views/RoleView.mxml"/>
+    <module application="src/ClientEssential.mxml" destPath="net/vicp/madz/etl/views/RelationshipMappingView.swf" optimize="true" sourcePath="src/net/vicp/madz/etl/views/RelationshipMappingView.mxml"/>
+    <module application="src/ClientEssential.mxml" destPath="net/vicp/madz/contract/views/UnitOfProjectView.swf" optimize="true" sourcePath="src/net/vicp/madz/contract/views/UnitOfProjectView.mxml"/>
+    <module application="src/ClientEssential.mxml" destPath="net/vicp/madz/production/views/ProductionRecordView.swf" optimize="true" sourcePath="src/net/vicp/madz/production/views/ProductionRecordView.mxml"/>
+    <module application="src/ClientEssential.mxml" destPath="net/vicp/madz/biz/common/views/CategoryView.swf" optimize="true" sourcePath="src/net/vicp/madz/biz/common/views/CategoryView.mxml"/>
+    <module application="src/ClientEssential.mxml" destPath="net/vicp/madz/admin/views/MenuItemView.swf" optimize="true" sourcePath="src/net/vicp/madz/admin/views/MenuItemView.mxml"/>
+    <module application="src/ClientEssential.mxml" destPath="net/vicp/madz/biz/common/views/MerchandiseView.swf" optimize="true" sourcePath="src/net/vicp/madz/biz/common/views/MerchandiseView.mxml"/>
+    <module application="src/ClientEssential.mxml" destPath="net/vicp/madz/contract/views/ContractView.swf" optimize="true" sourcePath="src/net/vicp/madz/contract/views/ContractView.mxml"/>
+    <module application="src/ClientEssential.mxml" destPath="net/vicp/madz/account/views/ContactView.swf" optimize="true" sourcePath="src/net/vicp/madz/account/views/ContactView.mxml"/>
+    <module application="src/ClientEssential.mxml" destPath="net/vicp/madz/invoice/views/InvoiceView.swf" optimize="true" sourcePath="src/net/vicp/madz/invoice/views/InvoiceView.mxml"/>
+    <module application="src/ClientEssential.mxml" destPath="net/vicp/madz/biz/common/views/UnitOfMeasureView.swf" optimize="true" sourcePath="src/net/vicp/madz/biz/common/views/UnitOfMeasureView.mxml"/>
+    <module application="src/ClientEssential.mxml" destPath="net/vicp/madz/account/views/AccountView.swf" optimize="true" sourcePath="src/net/vicp/madz/account/views/AccountView.mxml"/>
+    <module application="src/ClientEssential.mxml" destPath="net/vicp/madz/framework/views/SystemSettings.swf" optimize="true" sourcePath="src/net/vicp/madz/framework/views/SystemSettings.mxml"/>
+    <module application="src/ClientEssential.mxml" destPath="net/vicp/madz/contract/views/ProjectView.swf" optimize="true" sourcePath="src/net/vicp/madz/contract/views/ProjectView.mxml"/>
+    <module application="src/ClientEssential.mxml" destPath="net/vicp/madz/production/views/PlantView.swf" optimize="true" sourcePath="src/net/vicp/madz/production/views/PlantView.mxml"/>
+    <module application="src/ClientEssential.mxml" destPath="net/vicp/madz/invoice/views/AccountRunView.swf" optimize="true" sourcePath="src/net/vicp/madz/invoice/views/AccountRunView.mxml"/>
+  </modules>
+  <buildCSSFiles/>
+  <flashCatalyst validateFlashCatalystCompatibility="false"/>
+</actionScriptProperties>

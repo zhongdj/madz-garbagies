@@ -1,0 +1,870 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:VBox  xmlns:mx="http://www.adobe.com/2006/mxml" width="100%" height="100%" preinitialize="onPreInitialize(event);"
+ 	 initialize="onInitialize();" creationComplete="onCreateComplete();"  verticalGap="0">
+
+	<mx:Script>
+		<![CDATA[
+			
+			import mx.controls.Alert;
+			import mx.controls.Button;
+			import mx.events.FlexEvent;
+			import mx.events.ListEvent;
+			import mx.controls.ToolTip;
+			import mx.events.CloseEvent;
+			import mx.events.DataGridEvent;
+			import mx.events.ItemClickEvent;
+			import mx.controls.dataGridClasses.DataGridColumn;
+			import mx.controls.buttonBarClasses.ButtonBarButton;
+			import mx.controls.dataGridClasses.DataGridItemRenderer;
+			 
+			import net.vicp.madz.components.action.Action;
+			import net.vicp.madz.components.events.ToolBarDataGridEvent;
+			
+			/**
+			 * Action fields
+			 */ 
+			private var _homeAction:Action;
+			private var _previousAction:Action;
+			private var _nextAction:Action;
+			private var _endAction:Action;
+			private var _queryAction:Action;
+			private var _createAction:Action;
+			private var _submitAction:Action;
+			private var _rollbackAction:Action;
+			private var _deleteAction:Action;
+			private var _refreshAction:Action;
+			
+			/**
+			 * Data model fields
+			 **/ 
+			//for restore use fields
+			private var _originalStartIndex:int;
+			private var _originalEndIndex:int; 
+			private var _originalModel:Array;
+			
+			//core data model field
+			[Bindable]
+			private var _modelProvider:Array;
+			
+			//for visable use model fields
+			[Bindable]
+			private var _visableModel:Array;
+			private var _start:int;
+			private var _end:int;
+			private var _currentPage:int;
+			
+			//for submit model modification field
+			private var _modifiedModel:Array;
+			
+			/**
+			 * Toolbar related fields
+			 **/ 
+			[Bindable]
+			protected var _buttonProvider:Array;
+			
+			[Bindable]
+			private var _pageTip:String;
+			
+			[Bindable]
+			private var _pageSize:int = 20;
+			private var _pages:int;			
+			private var _rows:int;
+			
+			/**
+			 * Table related fields
+			 **/ 
+			[Bindable]
+			private var _columnsProvider:Array;
+			
+			private var lastPageEvent:ToolBarDataGridEvent;
+			
+			/**
+			 * On preinitialize event, before construct internal structures,
+			 * 
+			 * 1.Initialize actions such as: query,create,submit,rollback,delete,refresh,home,previous,next and end actions;
+			 * 2.Iniitalize ButtonBar dataprovider: _buttonProvider;
+			 * 3.Initialize ToolbarDataGrid event listeners:
+			 * 		3.1 DataGridEvent.ITEM_EDIT_BEGIN
+			 * 		3.2 ItemClickEvent.ITEM_CLICK
+			 * 
+			 **/
+			protected function onPreInitialize(event:FlexEvent):void{
+				initActions();
+				initButtons();
+				setGridEventListeners();
+			}
+			
+			private function initActions():void{
+				_queryAction = new Action("查询","查询",queryEnableIcon,null,true,onQuery);
+				_createAction = new Action("新建","新建",createEnableIcon,null,true,onCreate);
+				_submitAction = new Action("提交","提交",submitEnableIcon,submitDisableIcon,false,onSubmit);
+				_rollbackAction = new Action("撤销","撤销更改",cancelEnableIcon,cancelDisableIcon,false,onRollback);
+				_deleteAction = new Action("删除","删除",deleteEnableIcon,deleteDisableIcon,false,onDelete);
+				_refreshAction = new Action("刷新","刷新",refreshEnableIcon,null,true,onRefresh);
+				_homeAction = new Action("首页","首页",homeEnableIcon,homeDisableIcon,false,onHome);
+				_previousAction = new Action("上一页","上一页",previousEnableIcon,previousDisableIcon,false,onPrevious);
+				_nextAction = new Action("下一页","下一页",nextEnableIcon,nextDisableIcon,false,onNext);
+				_endAction = new Action("末页","末页",endEnableIcon,endDisableIcon,false,onEnd);				
+			}
+			
+			
+			/**
+			 * Initialize ButtonBar data Provider 
+			 * 
+			 **/
+			private function initButtons():void{
+				_buttonProvider = new Array();
+				
+				_buttonProvider.push(_queryAction);
+				_buttonProvider.push(_createAction);
+				_buttonProvider.push(_submitAction);
+				_buttonProvider.push(_rollbackAction);
+				_buttonProvider.push(_deleteAction);
+				_buttonProvider.push(_refreshAction);
+				_buttonProvider.push(_homeAction);
+				_buttonProvider.push(_previousAction);
+				_buttonProvider.push(_nextAction);
+				_buttonProvider.push(_endAction);
+			}
+			
+			private function setGridEventListeners():void{
+				addEventListener(DataGridEvent.ITEM_EDIT_BEGIN,onEditBegin,true);
+				addEventListener(ItemClickEvent.ITEM_CLICK,onItemSelect,true);
+				
+				addEventListener(ToolBarDataGridEvent.DATA_CREATE,onDataCreate);
+				addEventListener(ToolBarDataGridEvent.DATA_DELETE,onDataDelete);
+				addEventListener(ToolBarDataGridEvent.DATA_MODIFY,onDataGonnaModify);
+				addEventListener(ToolBarDataGridEvent.DATA_MODIFY_ROLLBACK,onDataModifyRollback);
+				addEventListener(ToolBarDataGridEvent.DATA_MODIFY_SUBMIT,onDataModifySubmit);
+				addEventListener(ToolBarDataGridEvent.END_PAGE,onEndPage);
+				addEventListener(ToolBarDataGridEvent.HOME_PAGE,onHomePage);
+				addEventListener(ToolBarDataGridEvent.NEXT_PAGE,onNextPage);
+				addEventListener(ToolBarDataGridEvent.PAGE_SIZE_CHANGE,onPageSizeChanged);
+				addEventListener(ToolBarDataGridEvent.PREVIOUS_PAGE,onPreviousPage);
+				addEventListener(ToolBarDataGridEvent.MODEL_CHANGED,onModelChanged);
+				addEventListener(ToolBarDataGridEvent.VISABLE_MODEL_CHANGED,onVisableModelChanged);
+			}
+			
+			
+			private function onDataCreate(event:ToolBarDataGridEvent):void{
+				model[model.length] = event.getCreatedData();
+				dispatchEvent(new ToolBarDataGridEvent(ToolBarDataGridEvent.MODEL_CHANGED));
+			}
+			
+			private function onDataDelete(event:ToolBarDataGridEvent):void{
+				_deleteAction.enabled = false;
+				//check if selectedObjects still exist when deleted from array
+				var selectedObjects:Array = event.getDeletedData();
+				for(var i:int = 0; i < selectedObjects.length; i ++){
+					var index:int = model.indexOf(selectedObjects[i]);
+					if(index >= 0){
+						model.splice(index,1);
+						if(_modifiedModel){
+							_modifiedModel.splice(index,1);
+						}
+					}
+					
+					index = visableModel.indexOf(selectedObjects[i]);
+					if(index >=0){
+						visableModel.splice(index,1);
+						if(_originalModel){
+							_originalModel.splice(index,1);
+							_originalEndIndex --;
+						}
+					}
+				}
+				if(_modifiedModel == null || _modifiedModel.length <= 0){
+					_submitAction.enabled = false;
+					_rollbackAction.enabled = false;
+				}
+				table.selectedItems = new Array();
+				calculateVisableCounter();
+				updateVisableModel();
+				refreshToolbarIcons();
+			}
+			private function onDataGonnaModify(event:ToolBarDataGridEvent):void{
+				copyOriginalModel();
+			}
+			
+			private function onDataModifyRollback(event:ToolBarDataGridEvent):void{
+				_submitAction.enabled = false;
+				_rollbackAction.enabled = false;
+				restoreOriginalModel();
+				refreshToolbarIcons();
+				_modifiedModel = null;
+			}
+			
+			private function onDataModifySubmit(event:ToolBarDataGridEvent):void{
+				_submitAction.enabled = false;
+				_rollbackAction.enabled = false;
+				refreshToolbarIcons();
+				_originalModel = null;
+				syncOriginalModel();
+				_modifiedModel = null;
+			}
+			
+			private function onEndPage(event:ToolBarDataGridEvent):void{
+				_currentPage = _pages;
+				calculateVisableCounter();
+				updateVisableModel();
+				decideNaviButtonState();
+			}
+			
+			private function onHomePage(event:ToolBarDataGridEvent):void{			
+				_currentPage = 1;
+				calculateVisableCounter();
+				updateVisableModel();
+				decideNaviButtonState();
+			}
+			
+			private function onNextPage(event:ToolBarDataGridEvent):void{
+				if(_currentPage < _pages){
+						_currentPage ++;
+					}
+				calculateVisableCounter();
+				updateVisableModel();
+				decideNaviButtonState();
+			}
+			
+			private function onPageSizeChanged(event:ToolBarDataGridEvent):void{
+				if(pageSizeInput.text == null ||pageSizeInput.text.length == 0){
+					pageSize = 20;
+				}else{
+					if(pageSizeInput.text.match( /[0-9]+/) ){
+						pageSize = parseInt(pageSizeInput.text);
+					}
+				}
+				calculateVisableCounter();
+				updateVisableModel();
+				decideNaviButtonState();
+				
+				if(_modifiedModel && _modifiedModel.length >0 ){ 
+					var event:ToolBarDataGridEvent = new ToolBarDataGridEvent(ToolBarDataGridEvent.DATA_MODIFY_ROLLBACK);
+					event.setSubmitingData(_modifiedModel);
+					dispatchEvent(event);
+				}
+			}
+			
+			private function onPreviousPage(event:ToolBarDataGridEvent):void{
+				if(_currentPage > 1){
+					_currentPage --;
+				}
+				calculateVisableCounter();
+				updateVisableModel();
+				decideNaviButtonState();
+			}
+			
+			private function onModelChanged(event:ToolBarDataGridEvent):void{
+				if(end - start < pageSize){
+					updateVisableModel();
+				}
+			}
+			
+			private function onVisableModelChanged(event:ToolBarDataGridEvent):void{
+				syncOriginalModel();
+			}
+			
+			private function syncOriginalModel():void{
+				if(_originalModel == null){
+					_originalModel = new Array();
+				}
+				if(_originalModel.length == visableModel.length){
+					return;
+				}else if(_originalModel.length < visableModel.length){
+					for(var i:int = _originalModel.length; i < visableModel.length; i ++){
+						_originalModel.push(clone(visableModel[i]));
+					}
+					_originalStartIndex = start;
+					_originalEndIndex = end;
+				}else{
+				}
+			}
+			
+			public function calculateVisableCounter():void{
+				recalculatePageCounters();
+				resetPageTip();
+			}
+			
+			private function resetPageTip():void{
+				pageTip = "总行数：" + _rows + " ( 第 " + _currentPage + " 页 / 共 " + _pages + " 页 )";
+			}
+			
+			private function recalculatePageCounters():void{
+				rows = _modelProvider.length;
+				if(_pageSize <= 0){
+					_pageSize = 20;
+				}
+				if(_rows % _pageSize == 0){
+					_pages = _rows / _pageSize;
+				}else{
+					_pages = _rows / _pageSize + 1;
+				}
+				
+				_start = _pageSize * (_currentPage - 1);
+				if(_pageSize * _currentPage <= _rows){
+					_end = _pageSize * _currentPage ;
+				}else{
+					_end = _rows ;
+				}
+			}
+			private function updateVisableModel():void{
+				visableModel = model.slice(start,end);
+				dispatchEvent(new ToolBarDataGridEvent(ToolBarDataGridEvent.VISABLE_MODEL_CHANGED));
+			}
+			
+			private function decideNaviButtonState():void{
+				if(_currentPage <= 1){
+					_homeAction.enabled = false;
+					_previousAction.enabled = false;
+					if(_pages > 1){
+						_nextAction.enabled = true;
+						_endAction.enabled = true;
+					}else{
+						_nextAction.enabled = false;
+						_endAction.enabled = false;
+					}
+				}else{
+					if(_currentPage > 1){
+						_homeAction.enabled = true;
+						_previousAction.enabled = true;
+					}else{
+						_homeAction.enabled = false;
+						_previousAction.enabled = false;
+					}
+					
+					if(_currentPage < _pages){
+						_nextAction.enabled = true;
+						_endAction.enabled = true;
+					}else{
+						_nextAction.enabled = false;
+						_endAction.enabled = false;
+					}
+				}
+				refreshToolbarIcons();
+			}
+			/**
+			 * After preinitialize event,  after children created, UIComponent invoke initialize event.
+			 * 
+			 * On intialize event:
+			 * 
+			 * Set the enable state of ButtonBarButtons on ButtonBar, including reset button's icons
+			 *  
+			 **/
+			protected function onInitialize():void{
+				initializeToolbar();
+				initializeTable();
+			}
+			
+			protected function initializeToolbar():void{
+				if(toolbar){
+					trace("toolbar is constructed on initializeTable");
+				}else{
+					trace("toolbar is not constructed on initializeTable");
+				}
+				refreshToolbarIcons();
+			}
+			
+			protected function initializeTable():void{
+				if(table){
+					trace("table is constructed on initializeTable");
+				}else{
+					trace("table is not constructed on initializeTable");
+				}
+			}
+			
+			protected function refreshToolbarIcons():void{
+				if(table.selectedItems.length <= 0){
+					_deleteAction.enabled = false;
+				}
+				callLater(setupButtonEnabled);
+			}
+			
+			protected function setupButtonEnabled():void{
+				if(_buttonProvider != null && _buttonProvider.length > 0 && _buttonProvider.length == toolbar.getChildren().length){
+					for(var i:int = 0; i < _buttonProvider.length; i++){
+						ButtonBarButton(toolbar.getChildAt(i)).enabled = Action(_buttonProvider[i]).enabled;
+					}
+				}
+			}
+			
+			/**
+			 * After initialized, createComplete event is invoked.
+			 * 
+			 * On create Complete:
+			 * 		1. On toolbar create complete:
+			 * 			1.1 Add event listener  ItemClickEvent.ITEM_CLICK,onButtonClick
+			 * 		2. On table create complete:
+			 * 			2.1 Set table style
+			 * 			2.2 Add event listener  DataGridEvent.ITEM_EDIT_BEGIN,onTableItemEditBegin
+			 * 									FlexEvent.DATA_CHANGE,onTableDataChange
+			 * 									DataGridEvent.ITEM_EDIT_END,onItemEditEnd
+			 **/
+			 
+			protected function onCreateComplete():void{
+				onToolbarCreateComplete();
+				onTableCreateComplete();
+			}
+			
+			protected function onToolbarCreateComplete():void{
+				setToolbarStyle();
+				setToolbarListeners();
+			}
+			
+			protected function setToolbarStyle():void{
+				
+			}
+			
+			protected function setToolbarListeners():void{
+				toolbar.addEventListener(ItemClickEvent.ITEM_CLICK,onToolbarButtonClick);
+			}
+			
+			protected function onTableCreateComplete():void{
+				setTableStyle();
+				setTableListeners();
+			}
+			
+			protected function setTableStyle():void{
+				table.doubleClickEnabled = true;
+				table.allowMultipleSelection = true;
+				table.editable = true;
+			}
+			
+			protected function setTableListeners():void{
+				table.addEventListener(MouseEvent.DOUBLE_CLICK,onTableDoubleClick);
+				table.addEventListener(DataGridEvent.ITEM_EDIT_BEGIN,onTableItemEditBegin);
+				table.addEventListener(FlexEvent.DATA_CHANGE,onTableDataChange);
+				table.addEventListener(DataGridEvent.ITEM_EDIT_END,onItemEditEnd);
+			}
+			
+			/**
+			 * Event Listeners used by Toolbar
+			 * 
+			 **/ 
+			private function onToolbarButtonClick(event:ItemClickEvent):void  {
+				Action(event.item).context = this;
+                Action(event.item).onAction();
+            }
+            
+            /**
+			 * Event Listeners used by Table
+			 * 
+			 **/ 
+			 
+			private function onTableDoubleClick(event:MouseEvent):void{
+				trace(event.target);
+			}
+			
+			private function onTableItemEditBegin(event:DataGridEvent):void{
+//				refreshToolbarIcons();
+			}
+			
+			private function onTableDataChange(event:FlexEvent):void{
+				trace(event);
+				trace(event.target);
+			}
+			
+			private function onItemEditEnd(event:DataGridEvent):void{
+				
+				_submitAction.enabled = true;
+				_rollbackAction.enabled = true;
+				refreshToolbarIcons();
+				
+				var row:int = event.rowIndex;
+				if(_modifiedModel == null){
+					_modifiedModel = new Array();
+				}
+				var globalIndex:int = start + row ;
+				_modifiedModel[globalIndex] = model[globalIndex];
+				
+				trace(event);
+				trace(event.target);
+			}
+			
+			/**
+			 * Event Listeners used by ToolBarDataGrid
+			 * 
+			 **/
+			private function onItemSelect(event:Event):void{
+				if(event as ListEvent){
+					if(table != null){
+						if(table.selectedItems.length >= 1){
+							_deleteAction.enabled = true;
+						}else{
+							_deleteAction.enabled = false;
+						}
+					}else{
+							_deleteAction.enabled = false;
+					}
+					refreshToolbarIcons();
+				}else if(event as ItemClickEvent){
+					
+				}
+			}
+			
+			private function onEditBegin(dgEvent:DataGridEvent):void{
+				var event:ToolBarDataGridEvent = new ToolBarDataGridEvent(ToolBarDataGridEvent.DATA_MODIFY);
+				var row:int = dgEvent.rowIndex;
+				var globalIndex:int = start + row;
+				event.setModifiedData(model[globalIndex]);
+				dispatchEvent(event);
+			}
+			
+			
+			/**
+			 * Data Model Behaviors 
+			 * 
+			 * 
+			 **/
+			private function copyOriginalModel():void{
+				if(_originalModel == null){
+					_originalModel = new Array();
+				}
+				if(visableModel.length > 0){
+					if(_originalStartIndex != start || _originalEndIndex != end){
+						_originalModel = clone(visableModel);
+						_originalStartIndex = start;
+						_originalEndIndex = end;
+					}
+				}
+			}
+			
+			private function restoreOriginalModel():void{
+				trace("_originalModel" + _originalModel);
+				trace("_originalModel size" + _originalModel.length);
+				
+				visableModel = _originalModel;
+				for(var i:int = start; i < end; i ++){
+					model[i] = _originalModel[i - start];
+				}
+				resetOriginalStates();	
+				copyOriginalModel();
+				_modifiedModel = null;
+			}
+			
+			private function resetOriginalStates():void{
+				_originalEndIndex = 0;
+				_originalStartIndex = 0;
+				_originalModel = null;
+			}
+			
+			private function clone(source:Object):*{
+				var targetCopy:ByteArray = new ByteArray(); 
+			    targetCopy.writeObject(source); 
+			    targetCopy.position = 0; 
+			    return(targetCopy.readObject()); 
+			}
+			
+			
+			/**
+			 * Runtime Action Handlers
+			 * 
+			 */
+			private function onQuery(context:Object):void{
+				dispatchEvent(new ToolBarDataGridEvent(ToolBarDataGridEvent.DATA_QUERY));
+			} 
+
+			private function onCreate(context:Object):void{
+				dispatchEvent(new ToolBarDataGridEvent(ToolBarDataGridEvent.DATA_CREATE));
+			}		
+				 
+			private function onSubmit(context:Object):void{
+				if(_submitAction.enabled){
+					//Send submit event
+					var event:ToolBarDataGridEvent = new ToolBarDataGridEvent(ToolBarDataGridEvent.DATA_MODIFY_SUBMIT);
+					event.setSubmitingData(_modifiedModel);
+					dispatchEvent(event);
+				}
+			}
+			
+			private function onRollback(context:Object):void{
+				if(_rollbackAction.enabled){
+					//Send rollback event
+					var event:ToolBarDataGridEvent = new ToolBarDataGridEvent(ToolBarDataGridEvent.DATA_MODIFY_ROLLBACK);
+					event.setSubmitingData(_modifiedModel);
+					dispatchEvent(event);
+				}
+			}
+			
+			private function onDelete(context:Object):void{
+				if(_deleteAction.enabled){
+					//Send delete event
+					var event:ToolBarDataGridEvent = new ToolBarDataGridEvent(ToolBarDataGridEvent.DATA_DELETE);
+					var selectedObjects:Array = table.selectedItems;
+					event.setDeletedData(selectedObjects);
+					dispatchEvent(event);
+				}
+			}
+			private function onRefresh(context:Object):void{
+				dispatchEvent(new ToolBarDataGridEvent(ToolBarDataGridEvent.DATA_REFRESH));
+			}
+			
+			private function onHome(ctx:Object):void{
+				trace("onHome...");
+				if(_homeAction.enabled){
+					setupCloseAlertHandler(new ToolBarDataGridEvent(ToolBarDataGridEvent.HOME_PAGE));
+//					var event:ToolBarDataGridEvent = new ToolBarDataGridEvent(ToolBarDataGridEvent.HOME_PAGE);
+//					dispatchEvent(event);
+				}
+			}
+			
+			private function onPrevious(ctx:Object):void{
+				trace("onPrevious...");
+				if(_previousAction.enabled){
+					setupCloseAlertHandler(new ToolBarDataGridEvent(ToolBarDataGridEvent.PREVIOUS_PAGE));
+//					var event:ToolBarDataGridEvent = new ToolBarDataGridEvent(ToolBarDataGridEvent.PREVIOUS_PAGE);
+//					dispatchEvent(event);
+				}
+			}
+			
+			private function onNext(ctx:Object):void{
+				trace("onNext...");
+				if(_nextAction.enabled){
+					setupCloseAlertHandler(new ToolBarDataGridEvent(ToolBarDataGridEvent.NEXT_PAGE));
+//					var event:ToolBarDataGridEvent = new ToolBarDataGridEvent(ToolBarDataGridEvent.NEXT_PAGE);
+//					dispatchEvent(event);
+				}
+			}
+			
+			private function onEnd(ctx:Object):void{
+				trace("onEnd...");
+				if(_endAction.enabled){
+					setupCloseAlertHandler(new ToolBarDataGridEvent(ToolBarDataGridEvent.END_PAGE));
+//					var event:ToolBarDataGridEvent = new ToolBarDataGridEvent(ToolBarDataGridEvent.END_PAGE);
+//					dispatchEvent(event);
+				}
+			}
+						
+			private function onPageSizeChange():void{
+				trace("on pagesize changed");
+				setupCloseAlertHandler(new ToolBarDataGridEvent(ToolBarDataGridEvent.PAGE_SIZE_CHANGE));
+//				var event:ToolBarDataGridEvent = new ToolBarDataGridEvent(ToolBarDataGridEvent.PAGE_SIZE_CHANGE);
+//				dispatchEvent(event);
+			}
+			
+			
+			
+			private function setupCloseAlertHandler(event:ToolBarDataGridEvent):void{
+				lastPageEvent = event;
+				if(_modifiedModel && _modifiedModel.length > 0){
+					Alert.yesLabel = "是";
+					Alert.noLabel = "否";
+					Alert.show("数据已经更改,选择‘是’撤销更改继续翻页操作，选择‘否’撤销翻页操作",'',Alert.YES|Alert.NO,this,closeHandler);
+				}else{
+					lastPageEvent = null;
+					dispatchEvent(event);
+				}
+			}
+			
+			private function closeHandler(event:CloseEvent):void{
+				trace(event.detail);
+				if (event.detail==Alert.YES){
+					restoreOriginalModel();
+					if(lastPageEvent != null){
+      	              dispatchEvent(lastPageEvent);
+      	              lastPageEvent = null;
+     				}
+     			}
+                else
+                   trace("No");
+			}
+			
+			/**
+			 * Properties
+			 * 
+			 **/ 
+            
+            [Bindable]
+			public function get pageTip():String{
+				return _pageTip;
+			}
+			
+			public function set pageTip(pageTip:String):void{
+				_pageTip = pageTip;
+			}
+			
+			public function get pages():int{
+				return _pages;
+			}
+			
+			public function set pages(pages:int):void{
+				_pages = pages;
+			}
+			
+			public function get rows():int{
+				return _rows;
+			}
+		
+			public function set rows(rows:int):void{
+				_rows = rows;
+				if(_rows <= _pageSize){
+					_currentPage = 1;
+					decideNaviButtonState();
+				}
+			}
+			
+			public function get currentPage():int{
+				return _currentPage;
+			}
+			
+			public function set currentPage(currentPage:int):void{
+				_currentPage = currentPage;
+			}
+			
+			public function get pageSize():int{
+				return _pageSize;
+			}
+			
+			[Bindable]
+			public function set pageSize(pageSize:int):void{
+				var oldSize:int = _pageSize;
+				_pageSize = pageSize;
+				_currentPage = 1;
+				calculateVisableCounter();
+				updateVisableModel();
+				decideNaviButtonState();
+				table.rowCount = pageSize;
+				table.height = table.headerHeight + (table.rowCount + 1) * table.rowHeight;
+			}
+			
+			[Bindable]
+			public function get model():Array{
+				return _modelProvider;
+			}
+			
+			public function set model(array:Array):void{
+				_modelProvider = array;
+				_currentPage = 1;
+				calculateVisableCounter();
+				updateVisableModel();
+				decideNaviButtonState();
+			}
+			
+			
+			[Bindable]
+			public function get visableModel():Array{
+				return _visableModel;
+			}
+			
+			public function set visableModel(result:Array):void{
+				_visableModel = result;
+			}
+			
+			[Bindable]
+			public function get start():int{
+				return _start;
+			}
+			
+			public function set start(start:int):void{
+				_start = start;
+			}
+			
+			[Bindable]
+			public function get end():int{
+				return _end;
+			}
+			
+			public function set end(end:int):void{
+				_end = end;				
+			}
+			
+			[Bindable]
+			public function get columns():Array{
+				return _columnsProvider;
+			}
+			
+			public function set columns(columns:Array):void{
+				if(columns.length > 0){
+					if(_columnsProvider == null){
+						_columnsProvider = new Array();
+					}
+					for(var i:int = 0;i < columns.length;i++){
+						_columnsProvider.push(columns[i]);
+					}
+				}
+			}
+			
+			[Bindable]
+			[Embed(source="net/vicp/madz/assets/TableIcons/create_enable.PNG")]
+			public static var queryEnableIcon:Class;
+		
+			[Bindable]
+			[Embed(source="net/vicp/madz/assets/TableIcons/create_enable.PNG")]
+			public static var createEnableIcon:Class;
+			
+			[Bindable]
+			[Embed(source="net/vicp/madz/assets/TableIcons/delete_enable.PNG")]
+			public static var deleteEnableIcon:Class;
+			
+			[Bindable]
+			[Embed(source="net/vicp/madz/assets/TableIcons/delete_disable.PNG")]
+			public static var deleteDisableIcon:Class;
+			
+			[Bindable]
+			[Embed(source="net/vicp/madz/assets/TableIcons/submit_enable.PNG")]
+			public static var submitEnableIcon:Class;
+			
+			[Bindable]
+			[Embed(source="net/vicp/madz/assets/TableIcons/submit_disable.PNG")]
+			public static var submitDisableIcon:Class;
+			
+			[Bindable]
+			[Embed(source="net/vicp/madz/assets/TableIcons/cancel_enable.PNG")]
+			public static var cancelEnableIcon:Class;
+			
+			[Bindable]
+			[Embed(source="net/vicp/madz/assets/TableIcons/cancel_disable.PNG")]
+			public static var cancelDisableIcon:Class;
+			
+			[Bindable]
+			[Embed(source="net/vicp/madz/assets/TableIcons/refresh_enable.PNG")]
+			public static var refreshEnableIcon:Class;
+			[Bindable]
+			[Embed(source="net/vicp/madz/assets/TableIcons/home_enable.PNG")]
+			public static var homeEnableIcon:Class;
+			
+			[Bindable]
+			[Embed(source="net/vicp/madz/assets/TableIcons/home_disable.PNG")]
+			public static var homeDisableIcon:Class;
+			
+			[Bindable]
+			[Embed(source="net/vicp/madz/assets/TableIcons/previous_enable.PNG")]
+			public static var previousEnableIcon:Class;
+			
+			[Bindable]
+			[Embed(source="net/vicp/madz/assets/TableIcons/previous_disable.PNG")]
+			public static var previousDisableIcon:Class;
+			
+			[Bindable]
+			[Embed(source="net/vicp/madz/assets/TableIcons/next_enable.PNG")]
+			public static var nextEnableIcon:Class;
+			
+			[Bindable]
+			[Embed(source="net/vicp/madz/assets/TableIcons/next_disable.PNG")]
+			public static var nextDisableIcon:Class;
+			
+			[Bindable]
+			[Embed(source="net/vicp/madz/assets/TableIcons/end_enable.PNG")]
+			public static var endEnableIcon:Class;
+			
+			[Bindable]
+			[Embed(source="net/vicp/madz/assets/TableIcons/end_disable.PNG")]
+			public static var endDisableIcon:Class;
+		]]>
+	</mx:Script>
+	<mx:HBox id="toolbarBox" width="100%" verticalAlign="middle">
+		<mx:ButtonBar id="toolbar" 
+				labelField="label" 
+				toolTipField="toolTip"
+            	dataProvider="{_buttonProvider}"
+            	horizontalAlign="left">
+		</mx:ButtonBar>
+		<mx:Label text="页面大小:" fontSize="12" styleName="chineseFont" textAlign="right"/>
+		<mx:TextInput id="pageSizeInput" width="37" text="{pageSize}" enter="onPageSizeChange();"/>
+		<mx:Label text="{pageTip}" styleName="chineseFont" textAlign="center"/>
+	</mx:HBox>
+    <mx:DataGrid id="table" height="100%" fontSize="12" width="100%" 
+    	dataProvider="{visableModel}" 
+    	styleName="chineseFont" columns="{columns}">
+	</mx:DataGrid>
+    
+</mx:VBox>

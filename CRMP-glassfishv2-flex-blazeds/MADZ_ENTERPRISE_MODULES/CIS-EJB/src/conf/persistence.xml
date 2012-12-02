@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence version="1.0"
+	xmlns="http://java.sun.com/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_1_0.xsd">
+	<persistence-unit name="CRMPBiz-ejbPU"
+		transaction-type="JTA">
+		<provider>oracle.toplink.essentials.PersistenceProvider</provider>
+		<jta-data-source>jdbc/crmp</jta-data-source>
+		<class>net.madz.infra.logging.entity.OperationLog</class>
+		<class>net.madz.infra.security.persistence.User</class>
+		<class>net.madz.infra.security.persistence.Tenant</class>
+		<class>net.madz.infra.security.persistence.UserGroup</class>
+		<class>net.madz.infra.security.persistence.MenuItem</class>
+		<class>net.madz.infra.security.persistence.Role</class>
+		<class>net.madz.infra.security.logging.entity.TenantOperationLog</class>
+		<exclude-unlisted-classes>true</exclude-unlisted-classes>
+		<properties>
+			<property name="toplink.ddl-generation" value="create-tables" />
+		</properties>
+	</persistence-unit>
+</persistence>

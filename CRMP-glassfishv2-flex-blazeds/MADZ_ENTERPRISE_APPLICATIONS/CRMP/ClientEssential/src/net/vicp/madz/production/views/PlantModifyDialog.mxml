@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml"
+		  width="438" height="220" creationComplete="onCreateComplete(event);" fontSize="12"
+		  layout="absolute" title="搅拌站编辑视图">
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.ArrayCollection;
+			import mx.events.FlexEvent;
+			import mx.events.ListEvent;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import net.vicp.madz.admin.vo.UserTO;
+			
+			import net.vicp.madz.production.vo.MixingPlantTO;
+			
+			private var mixingPlant : MixingPlantTO;
+			
+			public function setMixingPlant(item:MixingPlantTO) : void {
+			    if (null == setMixingPlant) {
+					return;
+				}
+				
+				this.mixingPlant = item;
+				
+				idInput.text = item.id;
+				MixingPlantNameInput.text = item.name;
+				
+				//TODO SET COMBO BOX
+				
+
+			}
+			
+			public function reset():void{
+				if (null != MixingPlantNameInput) {
+					MixingPlantNameInput.text = "";
+				}
+				if (null != operatorBox) {
+					operatorBox.selectedIndex = -1;
+				}
+				mixingPlant = null;
+			}
+			
+			public function onCreateComplete(event:FlexEvent):void {
+				server.addEventListener(ResultEvent.RESULT,onFetch);
+				server.findAllUser();
+				operatorBox.addEventListener(ListEvent.CHANGE, onComboBoxChange);
+			}
+			
+			private function onFetch(event:ResultEvent) : void {
+				if (null != event.result) {
+					operatorBox.dataProvider = event.result;
+					operatorBox.labelField = "username";
+					setMixingPlant(this.mixingPlant);
+				}
+			}
+			
+			private function onComboBoxChange(event:ListEvent) : void {
+				this.mixingPlant.operatorId = (event.target as ComboBox).selectedItem.id;
+				this.mixingPlant.operatorName = (event.target as ComboBox).selectedItem.username;
+			}
+		]]>
+	</mx:Script>
+	<mx:Label x="37" y="21" width="122" fontWeight="bold" text="标识:" textAlign="right"/>
+	<mx:TextInput id="idInput" x="167" y="19" width="211" editable="false"/>
+	<mx:Label x="37" y="59" width="122" fontWeight="bold" text="搅拌站名称:" textAlign="right"/>
+	<mx:TextInput id="MixingPlantNameInput" x="167" y="57" width="211"/>
+	<mx:Button id="updateButton" x="78" y="130" width="95" label="更新"/>
+	<mx:Button id="updateAndCloseButton" x="185" y="130" width="95" label="更新并关闭"/>
+	<mx:Button id="closeButton" x="288" y="130" width="93" label="关闭"/>
+	<mx:Label x="37" y="93" width="122" fontWeight="bold" text="操作员姓名:" textAlign="right"/>
+	<mx:ComboBox id="operatorBox" x="167" y="93" width="211" editable="true"/>
+	<mx:RemoteObject id="server" destination="UI"/>
+</mx:Panel>

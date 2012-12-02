@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE web-app PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN" "http://java.sun.com/dtd/web-app_2_3.dtd">
+<web-app>
+
+	<display-name>BlazeDS</display-name>
+	<description>BlazeDS Application</description>
+
+	<!-- Http Flex Session attribute and binding listener support -->
+	<listener>
+		<listener-class>flex.messaging.HttpFlexSession</listener-class>
+	</listener>
+
+	<!-- MessageBroker Servlet -->
+	<servlet>
+		<servlet-name>MessageBrokerServlet</servlet-name>
+		<display-name>MessageBrokerServlet</display-name>
+		<servlet-class>flex.messaging.MessageBrokerServlet</servlet-class>
+		<init-param>
+			<param-name>services.configuration.file</param-name>
+			<param-value>/WEB-INF/flex/services-config.xml</param-value>
+		</init-param>
+		<load-on-startup>1</load-on-startup>
+	</servlet>
+
+	<servlet>
+		<servlet-name>TestServlet</servlet-name>
+		<servlet-class>net.madz.servlet.TestServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>MessageBrokerServlet</servlet-name>
+		<url-pattern>/messagebroker/*</url-pattern>
+	</servlet-mapping>
+
+	<servlet-mapping>
+		<servlet-name>TestServlet</servlet-name>
+		<url-pattern>/TestServlet</url-pattern>
+	</servlet-mapping>
+	<welcome-file-list>
+		<welcome-file>index.html</welcome-file>
+		<welcome-file>index.htm</welcome-file>
+	</welcome-file-list>
+
+	<!-- for WebSphere deployment, please uncomment -->
+	<!-- <resource-ref> <description>Flex Messaging WorkManager</description> 
+		<res-ref-name>wm/MessagingWorkManager</res-ref-name> <res-type>com.ibm.websphere.asynchbeans.WorkManager</res-type> 
+		<res-auth>Container</res-auth> <res-sharing-scope>Shareable</res-sharing-scope> 
+		</resource-ref> -->
+
+
+
+	<security-constraint>
+		<display-name>Test</display-name>
+		<web-resource-collection>
+			<web-resource-name>TestServlet</web-resource-name>
+			<description>TestServlet</description>
+			<url-pattern>/TestServlet</url-pattern>
+			<http-method>GET</http-method>
+			<http-method>POST</http-method>
+			<http-method>HEAD</http-method>
+			<http-method>PUT</http-method>
+			<http-method>OPTIONS</http-method>
+			<http-method>TRACE</http-method>
+			<http-method>DELETE</http-method>
+		</web-resource-collection>
+		<auth-constraint>
+			<description />
+			<role-name>SA</role-name>
+			<role-name>OP</role-name>
+			<role-name>ADMIN</role-name>
+		</auth-constraint>
+	</security-constraint>
+	<login-config>
+		<auth-method>BASIC</auth-method>
+		<realm-name>MadzRealm</realm-name>
+	</login-config>
+	<security-role>
+		<description />
+		<role-name>SA</role-name>
+	</security-role>
+	<security-role>
+		<description />
+		<role-name>OP</role-name>
+	</security-role>
+	<security-role>
+		<description />
+		<role-name>ADMIN</role-name>
+	</security-role>
+</web-app>

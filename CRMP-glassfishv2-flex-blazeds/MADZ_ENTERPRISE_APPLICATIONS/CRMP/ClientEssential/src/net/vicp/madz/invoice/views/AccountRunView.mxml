@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="utf-8"?>
+<framework:ManagedView xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:components="net.vicp.madz.components.*"
+					   xmlns:framework="net.vicp.madz.framework.views.*" layout="vertical" width="100%" height="100%"  creationComplete="init();">
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.*;
+			import mx.controls.Alert;
+			import mx.controls.dataGridClasses.DataGridColumn;
+			import mx.core.IFlexDisplayObject;
+			import mx.events.FlexEvent;
+			import mx.events.ListEvent;
+			import mx.managers.PopUpManager;
+			import mx.rpc.AsyncToken;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			import net.vicp.madz.components.events.ActionTableEvent;
+			import net.vicp.madz.components.renderer.DateRendererFactory;
+			import net.vicp.madz.invoice.vo.AccountRunTaskTO;
+			import net.vicp.madz.invoice.vo.AllAccountRunTaskTO;
+			import net.vicp.madz.invoice.vo.SpecifiedUnitOfProjectAccountRunTaskTO;
+			
+			//////////////////////////////////////////////////////
+			////
+			//// Fields 
+			////
+			//////////////////////////////////////////////////////
+			private static const INVALID:int = -1;
+			private static const QUERY:int = 0;
+			private static const CREATE:int = 1;
+			private static const UPDATE:int = 2;
+			private static const DELETE:int = 3;
+			
+			private var createForm:AccountRunCreateDialog;
+			private var updateForm:AccountRunModifyDialog;
+			
+			[Bindable]
+			public var dataList:Array;
+			[Bindable]
+			private var columnProvider:Array;
+			private var resultToken:AsyncToken;
+			private var lastRPCType:int;
+			//////////////////////////////////////////////////////
+			////
+			//// Methods 
+			//// 
+			//////////////////////////////////////////////////////
+			
+			//////////////////////////////////////////////////////
+			//// Methods : initialize 
+			//////////////////////////////////////////////////////
+			private function init():void{
+				initDataTable();
+				initListeners();
+			}
+			
+			private function initDataTable():void {
+				columnProvider = new Array();
+				
+				var col:DataGridColumn = new DataGridColumn("state");
+				col.headerText="状态";
+				col.dataField="state";
+				col.editable = false;
+				columnProvider.push(col);   
+				
+				col = new DataGridColumn("startDate");
+				col.headerText="起始日期";
+				col.dataField="startDate";
+				col.editable = false;
+				col.itemRenderer = new DateRendererFactory("startDate");
+				columnProvider.push(col); 
+				
+				col = new DataGridColumn("endDate");
+				col.headerText="截止日期";
+				col.dataField="endDate";
+				col.editable = false;
+				col.itemRenderer = new DateRendererFactory("endDate");
+				columnProvider.push(col); 
+				
+				col = new DataGridColumn("executeDate");
+				col.headerText="执行日期";
+				col.dataField="executeDate";
+				col.editable = false;
+				col.itemRenderer = new DateRendererFactory("executeDate");
+				columnProvider.push(col); 
+	
+				col = new DataGridColumn("executeStartTime");
+				col.headerText="执行开始时间";
+				col.dataField="executeStartTime";
+				col.editable = false;
+				col.itemRenderer = new DateRendererFactory("executeStartTime");
+				columnProvider.push(col); 
+				
+				col = new DataGridColumn("executeEndTime");
+				col.headerText="执行终止时间";
+				col.dataField="executeEndTime";
+				col.editable = false;
+				col.itemRenderer = new DateRendererFactory("executeEndTime");
+				columnProvider.push(col); 
+				
+				
+				col = new DataGridColumn("generatedInvoiceQuantity");
+				col.headerText="已生成往来帐数量";
+				col.dataField="generatedInvoiceQuantity";
+				col.editable = false;
+				columnProvider.push(col); 
+				
+				col = new DataGridColumn("generatedInvoiceAmount");
+				col.headerText="已生成往来帐金额";
+				col.dataField="generatedInvoiceAmount";
+				col.editable = false;
+				columnProvider.push(col);       
+				
+				col = new DataGridColumn("scannedProductionRecordQuantity");
+				col.headerText="已扫描生产记录数量";
+				col.dataField="scannedProductionRecordQuantity";
+				col.editable = false;
+				columnProvider.push(col);   
+				
+				
+				col = new DataGridColumn("scannedProductivity");
+				col.headerText="已扫描产量";
+				col.dataField="scannedProductivity";
+				col.editable = false;
+				columnProvider.push(col);   
+				
+				dataTable.columnProvider = columnProvider;
+			}
+			
+			
+			private function initListeners():void {
+				dataTable.addEventListener(ListEvent.ITEM_CLICK,onItemSelected);
+				//For Query
+				dataTable.addEventListener(ActionTableEvent.REQUEST_DATA_QUERY,executeQuery);
+				dataTable.addEventListener(ActionTableEvent.SUBMIT_QUERY_CONDITION,executeQuery);
+				//For Modify
+				dataTable.addEventListener(ActionTableEvent.REQUEST_DATA_MODIFY,popupModifyView);
+				dataTable.addEventListener(ActionTableEvent.DATA_MODIFY_SUBMIT,executeUpdate);
+				//For Create
+				dataTable.addEventListener(ActionTableEvent.DATA_CREATE,popupCreateView);
+				//For Delete
+				dataTable.addEventListener(ActionTableEvent.DATA_DELETE,executeDelete);
+				
+				//For Create, Modify, Delete
+				accountingServer.addEventListener(FaultEvent.FAULT,onFault);
+				accountingServer.addEventListener(ResultEvent.RESULT,onSuccess);
+				
+				//For Query
+				accountingQueryServer.addEventListener(ResultEvent.RESULT,onDataFetch);
+				accountingQueryServer.addEventListener(FaultEvent.FAULT,onDataFetchFault);
+				
+			}
+			
+			//////////////////////////////////////////////////////
+			////
+			//// Event Handlers
+			//// 
+			//////////////////////////////////////////////////////			
+			private function onItemSelected(event:ListEvent):void{
+				trace("Item Selected");
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Query Handlers
+			//////////////////////////////////////////////////////		
+			private function executeQuery(event:ActionTableEvent):void{
+				accountingQueryServer.findAccountRunTasks();
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Create Handlers
+			//////////////////////////////////////////////////////	
+			private function popupCreateView(event:ActionTableEvent):void{
+				if(createForm == null){
+					createForm = new AccountRunCreateDialog();
+				}else{
+					createForm.reset();
+				}
+				PopUpManager.addPopUp(createForm as IFlexDisplayObject, this as DisplayObject, true);
+				PopUpManager.centerPopUp(createForm);
+				createForm.createButton.addEventListener(FlexEvent.BUTTON_DOWN,onCreate);
+				createForm.createAndCloseButton.addEventListener(FlexEvent.BUTTON_DOWN,onCreateAndClose);
+				createForm.closeBtn.addEventListener(FlexEvent.BUTTON_DOWN,onCreateClose);
+			}
+			
+			private function onCreate(event:FlexEvent):void{
+				createData();
+			}
+			private function onCreateAndClose(event:FlexEvent):void{
+				createData();
+				PopUpManager.removePopUp(createForm);
+			}
+			
+			private function onCreateClose(event:FlexEvent):void{
+				PopUpManager.removePopUp(createForm);
+			}
+			
+			private function createData() : void {
+				var accountRun : AccountRunTaskTO;
+				if (createForm.accountRunTypeGroup.selectedValue == "全部单位工程") {
+					accountRun = new AllAccountRunTaskTO();
+				} else {
+					accountRun = new SpecifiedUnitOfProjectAccountRunTaskTO();
+					(accountRun as SpecifiedUnitOfProjectAccountRunTaskTO).specifiedUnitOfProjectId = createForm.unitOfProjectComboBox.selectedItem["id"];
+				}
+				accountRun.startDate =  createForm.startDateField.selectedDate;
+				accountRun.endDate = createForm.endDateField.selectedDate;
+				accountRun.executeDate = createForm.executeDateField.selectedDate;
+				
+				accountingServer.createAccountRunTask(accountRun);
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Delete Handlers
+			//////////////////////////////////////////////////////	
+			private function executeDelete(event:ActionTableEvent):void{
+				//				trace(event.getDeletedData());
+				//				var uoms:Array = event.getDeletedData();
+				//				if(uoms == null || uoms.length <= 0){
+				//					return;
+				//				}
+				//				var task:Array = new Array(uoms.length);
+				//				for(var i:int = 0; i < uoms.length; i ++){
+				//					task[i] = uoms[i].id;
+				//				}
+				//				resultToken = contractServer.softDeleteContracts(task);
+				//				lastRPCType = DELETE;
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : Update Handlers
+			//////////////////////////////////////////////////////	
+			private function popupModifyView(event:ActionTableEvent):void {
+				if (null == event.getRequestModifyData()) {
+					return ;
+				}
+				if(updateForm == null){
+					updateForm = new AccountRunModifyDialog();
+				}else{
+					updateForm.reset();
+				}
+				updateForm.setData(event.getRequestModifyData());
+				PopUpManager.addPopUp(updateForm as IFlexDisplayObject, this as DisplayObject, true);
+				PopUpManager.centerPopUp(updateForm);
+				updateForm.closeBtn.addEventListener(FlexEvent.BUTTON_DOWN,onUpdateClose);
+				dataTable.updateItem(event.getRequestModifyData(), event.getRequestModifyRowIndex());
+				
+			}
+			
+			private function onUpdateClose(event:FlexEvent):void{
+				PopUpManager.removePopUp(updateForm);
+			}	
+			
+			private function executeUpdate(event:ActionTableEvent):void {
+//				var modified:Array = event.getSubmitingData();
+//				if(!modified || modified.length <= 0){
+//					return;
+//				}
+//				var submitData:Array = new Array();
+//				resultToken = accountingServer.updateServer(modified);
+//				lastRPCType = UPDATE;
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Event Handlers : RPC Handlers
+			//////////////////////////////////////////////////////	
+			private function onFault(event:FaultEvent):void {
+				trace(event);
+				Alert.show(event.fault.faultString, "Error");
+				initDataModel();
+			}
+			
+			private function initDataModel():void {
+				accountingQueryServer.findAccountRunTasks();
+			}      
+			
+			private function onSuccess(event:ResultEvent):void {
+				if((!resultToken)||(!resultToken.message)||(!resultToken.message.body)){
+					return;
+				}
+				var body:Array = resultToken.message.body as Array;
+				if(lastRPCType == CREATE){
+					if(null != resultToken.result){
+						resultToken = accountingQueryServer.findAccountRunTaskById(resultToken.result);
+						lastRPCType = QUERY;
+					} else {
+						lastRPCType = INVALID;
+					}
+				} else {
+					lastRPCType = INVALID;
+				}
+			}
+			
+			private function onDataFetch(event:ResultEvent):void{
+				if (event.result is ArrayCollection) {
+					dataList = ArrayCollection(event.result).toArray();
+					dataTable.model = dataList;
+				} else {
+					dataTable.submitCreateData(event.result);
+				}
+			}
+			
+			private function onDataFetchFault(event:FaultEvent):void{
+				trace(event.fault.toString());
+				Alert.show(event.fault.toString());
+			}
+			
+			//////////////////////////////////////////////////////
+			//// Methods : Override Methods
+			//////////////////////////////////////////////////////	
+			public override function reset():void{
+				dataTable.reset();
+			}            
+		]]>
+	</mx:Script>
+	
+	<mx:RemoteObject id="accountingQueryServer" destination="Accounting"/>
+	<mx:RemoteObject id="accountingServer" destination="Accounting"/>
+	<mx:Panel width="100%" height="100%" fontSize="12" layout="vertical" title="记账任务">
+		<components:ActionTable id="dataTable"/>
+	</mx:Panel>
+</framework:ManagedView>
+

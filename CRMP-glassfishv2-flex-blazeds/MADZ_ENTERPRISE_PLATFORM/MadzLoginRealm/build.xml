@@ -1,0 +1,49 @@
+<project name="MadzSecurityRealmModule" default="jar">
+	<property name="jar.file.name" value="madz-security-realm.jar" />
+	<property name="root.dir" value="../../" />
+
+	<path id="build.classpath">
+		<fileset dir="${root.dir}/${3rd-party.home}">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+
+	<target name="delete-dist">
+		<delete dir="dist" quiet="true" />
+		<delete dir="bin" quiet="true" />
+	</target>
+
+	<!--Madz Security Realm Module -->
+	<target name="clean">
+		<delete dir="dist" quiet="true" />
+		<mkdir dir="dist/classes" />
+	</target>
+
+	<target name="compile" depends="clean">
+		<javac debug="true" srcdir="src" destdir="dist/classes"
+			classpathref="build.classpath">
+		</javac>
+		<copy todir="dist/classes">
+			<fileset dir="src" includes="**/*.properties" />
+		</copy>
+	</target>
+
+	<target name="jar" depends="compile">
+		<jar jarfile="dist/${jar.file.name}" basedir="dist/classes" />
+		<copy todir="${root.dir}/${dist.platform.home}">
+			<fileset dir="dist/" includes="*.jar" />
+		</copy>
+	</target>
+
+	<target name="findBugs" depends="jar">
+		<findbugs home="${root.dir}/${findbugs.home}" classpathref="build.classpath"
+			output="xml" outputFile="dist/findbugs.xml">
+			<sourcePath path="src" />
+			<class location="${default.target.dir}/${jar.file.name}" />
+		</findbugs>
+	</target>
+
+	<target name="report" depends="jar, findBugs" />
+
+
+</project>

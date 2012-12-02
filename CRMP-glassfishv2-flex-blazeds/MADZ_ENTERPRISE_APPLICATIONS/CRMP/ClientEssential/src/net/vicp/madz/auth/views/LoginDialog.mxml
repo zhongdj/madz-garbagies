@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="425" height="90%" title="登陆窗口" styleName="glassPods" fontSize="16">
+	
+	<mx:Script>
+		<![CDATA[
+			import mx.events.FlexEvent;
+		
+			
+			public function reset():void{
+				userNameInput.text = "";
+				passwordInput.text = "";
+			}
+			
+			public function get username():String{
+				return userNameInput.text;
+			}
+			
+			public function get password():String{
+				return passwordInput.text;
+			}
+
+		]]>
+	</mx:Script>
+	
+	<mx:Label x="45" y="51" text="用户名:" width="81" height="21" fontWeight="bold" textAlign="left"/>
+	<mx:Label x="45" y="80" text="密码:" width="81" height="28" fontWeight="bold" textAlign="left"/>
+	<mx:TextInput x="134" y="49" id="userNameInput" text="administrator" displayAsPassword="false" editable="true" enabled="true" width="152"/>
+	<mx:TextInput x="134" y="78" id="passwordInput" text="Barryzdjwin5631" maxChars="16" displayAsPassword="true" editable="true" enabled="true" width="152"/>
+	<mx:Button x="134" y="128" label="登陆" width="66" id="loginButton"/>
+	<mx:Button x="222" y="128" label="取消" width="64" id="closeBtn"/>
+	<mx:LinkButton x="236" y="202" label="忘记密码" color="#0534FD"/>
+
+	
+</mx:Panel>

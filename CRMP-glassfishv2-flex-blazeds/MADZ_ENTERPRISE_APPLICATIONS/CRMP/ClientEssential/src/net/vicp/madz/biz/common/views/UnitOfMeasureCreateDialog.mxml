@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="366" height="286" title="添加计量单位" creationComplete="onCreateComplete(event);" fontSize="16">
+<mx:Script>
+	<![CDATA[
+		import net.vicp.madz.biz.common.vo.CategoryQTO;
+		import mx.events.FlexEvent;
+		import mx.rpc.events.FaultEvent;
+		import mx.rpc.events.ResultEvent;
+		import mx.collections.ArrayCollection;
+		
+		public function reset():void{
+			nameInput.text = "";
+			descriptionTextArea.text = "";	
+			createButton.enabled = false;
+			createAndCloseButton.enabled = false;
+		}
+		
+		private function onCreateComplete(event:FlexEvent):void{
+	      commonObjectQuery.addEventListener(ResultEvent.RESULT,onFetch);
+          commonObjectQuery.addEventListener(FaultEvent.FAULT,onFault);
+          commonObjectQuery.findUnitOfMeasure(true);
+          stage.focus = nameInput;
+          validate();
+		}
+		
+		private function onFetch(event:ResultEvent):void{
+		}
+		
+		private function onFault(event:FaultEvent):void{
+	
+		}
+		
+		private function validate() : void {
+			if (null != nameInput.text && 0 < nameInput.text.length) {
+				createButton.enabled = true;
+				createAndCloseButton.enabled = true;
+			} else {
+				createButton.enabled = false;
+				createAndCloseButton.enabled = false;
+			}
+		}
+				
+	]]>
+</mx:Script>
+	
+	<mx:Label x="33" y="42" text="名称：" width="76" fontWeight="bold" textAlign="center" height="25"/>
+	<mx:TextInput x="110" y="42" width="200" id="nameInput" tabIndex="2" height="25" change="validate()"/>
+			
+	<mx:Label x="33" y="76" text="描述：" width="76" textAlign="center" fontWeight="bold"/>
+	<mx:TextArea x="110" y="75" width="200" height="88" id="descriptionTextArea" wordWrap="true" editable="true" enabled="true" tabIndex="4" tabEnabled="true"/>
+	
+	<mx:Button x="43" y="187" label="创建" id="createButton" width="66" tabIndex="7"/>
+	<mx:Button x="244" y="187" label="取消" id="closeBtn" width="66" tabIndex="8"/>
+	
+	<mx:RemoteObject id="commonObjectQuery" destination="CommonObjectQuery"/>
+	<mx:Button x="117" y="187" label="创建并关闭" id="createAndCloseButton" width="119" tabIndex="7"/>
+
+</mx:Panel>

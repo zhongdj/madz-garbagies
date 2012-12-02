@@ -1,0 +1,68 @@
+<project name="TOBinding" default="jar">
+	<property name="jar.file.name" value="to-binding.jar" />
+	<property name="root.dir" value="../../" />
+
+	<path id="build.classpath">
+		<fileset dir="${root.dir}/${3rd-party.home}">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+
+	<!---->
+	<property name="run.classpath" value="dist/classes" />
+	<property name="run.srcpath" value="src" />
+	<property name="test.srcpath" value="test" />
+	<property name="test.report" value="report" />
+
+	<target name="delete-dist">
+		<delete dir="dist" quiet="true" />
+		<delete dir="bin" quiet="true" />
+	</target>
+
+	<!--TO Binding Module -->
+	<target name="clean">
+		<delete dir="dist" quiet="true" />
+		<mkdir dir="dist/classes" />
+	</target>
+
+	<target name="compile" depends="clean">
+		<javac debug="true" srcdir="src" destdir="dist/classes" />
+		<javac debug="true" destdir="${run.classpath}" srcdir="${run.srcpath}" />
+		<javac debug="true" destdir="${run.classpath}" srcdir="${test.srcpath}"
+			classpathref="build.classpath" />
+	</target>
+
+	<target name="junit" depends="compile">
+		<tstamp />
+		<mkdir dir="${test.report}" />
+		<mkdir dir="${test.report}/framework-${DSTAMP}-${TSTAMP}" />
+		<junit printsummary="true">
+			<classpath>
+				<pathelement path="${run.classpath}" />
+			</classpath>
+			<formatter type="xml" />
+			<batchtest fork="yes"
+				todir="${test.report}/framework-${DSTAMP}-${TSTAMP}">
+				<fileset dir="${test.srcpath}">
+					<include name="**/*Test.java" />
+				</fileset>
+			</batchtest>
+		</junit>
+	</target>
+	<target name="jar" depends="compile">
+		<jar jarfile="dist/${jar.file.name}" basedir="dist/classes" />
+		<copy todir="${root.dir}/${dist.platform.home}">
+			<fileset dir="dist/" includes="*.jar" />
+		</copy>
+	</target>
+
+	<target name="findBugs" depends="jar">
+		<findbugs home="${root.dir}/${findbugs.home}" classpathref="build.classpath"
+			output="xml" outputFile="dist/findbugs.xml">
+			<sourcePath path="src" />
+			<class location="${default.target.dir}/${jar.file.name}" />
+		</findbugs>
+	</target>
+
+	<target name="report" depends="junit, jar, findBugs" />
+</project>
