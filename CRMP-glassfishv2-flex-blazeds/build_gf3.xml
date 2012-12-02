@@ -1,0 +1,86 @@
+<project name="all" default="jar">
+
+	<!--Define property, path and taskdef-->
+	<property file="MADZ_BUILD/build.properties" />
+
+	<path id="build.classpath">
+		<fileset dir="${3rd-party.home}">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+
+	<taskdef name="findbugs" classname="edu.umd.cs.findbugs.anttask.FindBugsTask" classpathref="build.classpath" />
+
+	<target name="self-clean">
+		<delete dir="${dist.home}" />
+		<mkdir dir="${dist.platform.home}" />
+		<mkdir dir="${dist.modules.home}" />
+		<mkdir dir="${dist.applications.home}" />
+	</target>
+
+	<target name="delete-dist">
+		<delete dir="${dist.home}" />
+		<ant dir="${platform.home}" target="delete-dist" />
+		<ant dir="${modules.home}" target="delete-dist" />
+		<ant dir="${applications.home}" target="delete-dist" />
+	</target>
+
+
+	<target name="clean">
+		<ant dir="${platform.home}" target="clean" />
+		<ant dir="${modules.home}" target="clean" />
+		<ant dir="${applications.home}" target="clean" />
+	</target>
+
+	<target name="jar" depends="self-clean">
+		<ant dir="${platform.home}" target="jar" />
+		<ant dir="${modules.home}" target="jar" />
+		<ant dir="${applications.home}" target="jar" />
+	</target>
+
+
+	<target name="report" depends="self-clean">
+		<ant dir="${platform.home}" target="report" />
+		<ant dir="${modules.home}" target="report" />
+		<ant dir="${applications.home}" target="report" />
+	</target>
+
+	<target name="deploy-define">
+		<taskdef name="sun-appserv-deploy" classname="org.glassfish.ant.tasks.DeployTask">
+			<classpath path="${glassfish.home}/glassfish/lib/ant/ant-tasks.jar;${glassfish.home}/lib/sun-appserv-ant.jar;${glassfish.home}/lib/admin-cli.jar" />
+		</taskdef>
+		<taskdef name="sun-appserv-undeploy" classname="org.glassfish.ant.tasks.UndeployTask">
+			<classpath path="${glassfish.home}/glassfish/lib/ant/ant-tasks.jar;${glassfish.home}/lib/sun-appserv-ant.jar;${glassfish.home}/lib/admin-cli.jar" />
+		</taskdef>
+	</target>
+
+        <target name="import-data"> 
+		<sql driver="com.mysql.jdbc.Driver" 
+                    url="jdbc:mysql://localhost:3306/crmp?UseUnicode=true&amp;CharacterEncoding=GBK"
+                    userid="root" 
+                    password="1q2w3e4r5t" 
+                    src="data2.sql"
+                    encoding="UTF-8"
+                    print="yes" 
+                    output="outputfile.txt" classpathref="build.classpath" >
+		    
+		</sql>
+        </target>
+
+	<target name="deploy" depends="deploy-define, jar">
+		<sun-appserv-deploy file="${dist.applications.home}/crmp.ear" name="crmp" force="true" precompilejsp="false" verify="false" upload="true" user="admin" passwordfile="pass" host="localhost" port="4848" installdir="${glassfish.home}" />
+	</target>
+  
+
+	<target name="fast-deploy" depends="deploy-define">
+		<sun-appserv-deploy file="${dist.applications.home}/crmp.ear" name="crmp" force="true" precompilejsp="false" verify="false" upload="true" user="admin" passwordfile="pass" host="localhost" port="4848" installdir="${glassfish.home}" />
+	</target>
+
+	<target name="undeploy" depends="deploy-define">
+		<sun-appserv-undeploy name="crmp" user="admin" passwordfile="pass" host="localhost" port="4848" installdir="${glassfish.home}" />
+	</target>
+
+	<target name="redeploy" depends="undeploy, deploy" />
+
+</project>
+
