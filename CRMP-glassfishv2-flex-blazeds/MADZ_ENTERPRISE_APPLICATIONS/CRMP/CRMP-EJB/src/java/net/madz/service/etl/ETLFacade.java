@@ -24,6 +24,7 @@ import net.madz.infra.security.persistence.Tenant;
 import net.madz.infra.security.persistence.User;
 import net.madz.infra.security.util.TenantResources;
 import net.madz.interceptor.AuditInterceptor;
+import net.madz.interceptor.TenantCacheInterceptor;
 import net.madz.interceptor.ValidationInterceptor;
 import net.madz.module.account.entity.Contact;
 import net.madz.module.account.facade.AccountFacadeLocal;
@@ -57,7 +58,7 @@ import net.vicp.madz.infra.binding.TransferObjectFactory;
 
 @Stateless
 @RolesAllowed({ "ADMIN" })
-@Interceptors({ AuditInterceptor.class, ValidationInterceptor.class })
+@Interceptors({ TenantCacheInterceptor.class, AuditInterceptor.class, ValidationInterceptor.class })
 public class ETLFacade implements ETLFacadeRemote, ETLFacadeLocal {
 
 	@PersistenceContext(name = "persistence/EntityManager")
@@ -86,6 +87,7 @@ public class ETLFacade implements ETLFacadeRemote, ETLFacadeLocal {
 			database.setTenant(tenant);
 			final Date createdOn = new Date();
 			database.setCreatedOn(createdOn);
+			database.setOdbcDatasourceName(db.getOdbcDatasourceName());
 
 			String plantId = db.getPlantId();
 			if (null != plantId) {

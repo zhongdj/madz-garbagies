@@ -9,8 +9,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import net.madz.etl.demo.MysqlDBDataTypes;
-import net.madz.etl.demo.access.AccessDBDataTypes;
+import net.madz.etl.db.AccessDBDataTypes;
+import net.madz.etl.db.MysqlDBDataTypes;
 import net.madz.etl.engine.ISyncListener.SyncContext;
 import net.madz.remote.ETLClientProxy;
 import net.madz.service.etl.to.ColumnDescriptorTO;
@@ -25,27 +25,11 @@ import net.madz.utils.DbOperator;
 
 public class SyncEngine {
 
+	private static final int MYSQL_SYNC_BATCH_LIMIT = 2000;
+
 	public static final SyncEngine INSTANCE = new SyncEngine();
 
 	private static final int ACCESS_DB_BATCH_SIZE = 5000;
-
-	private static void appendIndicatorLiteral(
-			DatabaseImportIndicatorTO indicator, StringBuilder countSb) {
-		final String indicatorColumnType = indicator.getIndicatorColumnType();
-		if (AccessDBDataTypes.DATETIME.equals(indicatorColumnType)) {
-			countSb.append(" #");
-		} else if (!indicatorColumnType
-				.equalsIgnoreCase(AccessDBDataTypes.COUNTER)) {
-			countSb.append(" '");
-		}
-		countSb.append(indicator.getIndicatorValue());
-		if (AccessDBDataTypes.DATETIME.equals(indicatorColumnType)) {
-			countSb.append("#");
-		} else if (!indicatorColumnType
-				.equalsIgnoreCase(AccessDBDataTypes.COUNTER)) {
-			countSb.append("'");
-		}
-	}
 
 	private static int countData(DbOperator acessDbo,
 			TableDescriptorTO tableTO, DatabaseImportIndicatorTO indicator)
@@ -64,7 +48,7 @@ public class SyncEngine {
 			countSb.append("WHERE ").append(indicator.getIndicatorColumnName())
 					.append(" ");
 			countSb.append(" > ");
-			appendIndicatorLiteral(indicator, countSb);
+			AccessDBDataTypes.appendIndicatorLiteral(indicator, countSb);
 		}
 		PreparedStatement countPs = acessDbo.getPreparedStatement(countSb
 				.toString());
@@ -90,7 +74,7 @@ public class SyncEngine {
 			sb.append("WHERE ").append(indicator.getIndicatorColumnName())
 					.append(" ");
 			sb.append(" > ");
-			appendIndicatorLiteral(indicator, sb);
+			AccessDBDataTypes.appendIndicatorLiteral(indicator, sb);
 		}
 		sb.append(" ").append("ORDER BY ")
 				.append(indicator.getIndicatorColumnName()).append(" ASC");
@@ -98,21 +82,6 @@ public class SyncEngine {
 
 	public static SyncEngine getInstance() {
 		return INSTANCE;
-	}
-
-	// private String dataSourceName = "";
-	// private String mysqlDatabaseName = "";
-
-	private static boolean hasSingleQuote(ColumnDescriptorTO column) {
-		return !MysqlDBDataTypes.BIT.equalsIgnoreCase(column
-				.getColumnTypeName());
-	}
-
-	private static boolean requireDefaultNumber(ColumnDescriptorTO column) {
-		return MysqlDBDataTypes.DECIMAL.equalsIgnoreCase(column
-				.getColumnTypeName())
-				|| MysqlDBDataTypes.DOUBLE.equalsIgnoreCase(column
-						.getColumnTypeName());
 	}
 
 	private volatile ISyncListener listener = new ISyncListener() {
@@ -123,8 +92,6 @@ public class SyncEngine {
 
 		@Override
 		public void onImportBatchFailed(SyncContext context, RuntimeException ex) {
-			// TODO Auto-generated method stub
-
 		}
 
 		@Override
@@ -137,8 +104,6 @@ public class SyncEngine {
 
 		@Override
 		public void onImportFailed(SyncContext context, RuntimeException ex) {
-			// TODO Auto-generated method stub
-
 		}
 
 		@Override
@@ -151,8 +116,6 @@ public class SyncEngine {
 
 		@Override
 		public void onSyncBatchFailed(SyncContext context, RuntimeException ex) {
-			// TODO Auto-generated method stub
-
 		}
 
 		@Override
@@ -165,8 +128,6 @@ public class SyncEngine {
 
 		@Override
 		public void onSyncFailed(SyncContext context, RuntimeException ex) {
-			// TODO Auto-generated method stub
-
 		}
 
 		@Override
@@ -193,9 +154,10 @@ public class SyncEngine {
 	private String mysqlServerIpAddress = "localhost";
 
 	private SyncEngine() {
-		mysqlUsername = System.getProperty("mysql.username");
-		mysqlPassword = System.getProperty("mysql.password");
-		mysqlServerIpAddress = System.getProperty("mysql.host");
+		mysqlUsername = System.getProperty("mysql.username", mysqlUsername);
+		mysqlPassword = System.getProperty("mysql.password", mysqlPassword);
+		mysqlServerIpAddress = System.getProperty("mysql.host",
+				mysqlServerIpAddress);
 	}
 
 	private void clearContext(String plantId, SyncContext context) {
@@ -248,7 +210,6 @@ public class SyncEngine {
 		} catch (Exception ex) {
 			notifyFailed(ex);
 		} finally {
-
 		}
 	}
 
@@ -264,91 +225,9 @@ public class SyncEngine {
 		try {
 			int countData = countData(accessDbo, tableTO, indicator);
 			while (0 < countData) {
-
 				context.batchNumber = batchNumber++;
-				final long start = notifyImportBatchStarted(context);
-				try {
-					StringBuilder sb = new StringBuilder();
-					sb.append("SELECT TOP " + ACCESS_DB_BATCH_SIZE + " ");
-					for (ColumnDescriptorTO column : tableTO.getColumns()) {
-						sb.append(column.getAccessColumnName());
-						sb.append(",");
-					}
-					sb.deleteCharAt(sb.length() - 1);
-
-					generateFromAndWhereClauses(tableTO, indicator, sb);
-
-					StringBuilder insertSb = null;
-
-					ps = accessDbo.getPreparedStatement(sb.toString());
-					ResultSet rs = ps.executeQuery();
-					StringBuilder columnSb = null;
-					StringBuilder valueSb = null;
-					String indicatorValue = null;
-
-					while (rs.next()) {
-
-						context.completedQuantity++;
-
-						insertSb = new StringBuilder();
-						columnSb = new StringBuilder();
-						valueSb = new StringBuilder();
-						insertSb.append("INSERT INTO ")
-								.append(tableTO.getName()).append(" ");
-						insertSb.append("(");
-						for (ColumnDescriptorTO column : tableTO.getColumns()) {
-							columnSb.append(column.getColumnName());
-							columnSb.append(",");
-
-							if (hasSingleQuote(column)) {
-								valueSb.append("'");
-							}
-
-							if (indicator.getIndicatorColumnName()
-									.equalsIgnoreCase(column.getColumnName())) {
-								indicatorValue = rs.getString(indicator
-										.getIndicatorColumnName());
-								valueSb.append(indicatorValue);
-								indicator.setIndicatorValue(indicatorValue);
-								context.indicatorText = indicatorValue;
-							} else {
-								String value = rs.getString(column
-										.getColumnName());
-								if (null == value || 0 >= value.length()) {
-									if (requireDefaultNumber(column)) {
-										value = "0";
-									} else {
-										value = "";
-									}
-								}
-								valueSb.append(value);
-							}
-							if (hasSingleQuote(column)) {
-								valueSb.append("'");
-							}
-							valueSb.append(",");
-
-						}
-						columnSb.deleteCharAt(columnSb.length() - 1);
-						valueSb.deleteCharAt(valueSb.length() - 1);
-
-						insertSb.append(columnSb).append(" ");
-						insertSb.append(") VALUES (");
-						insertSb.append(valueSb);
-						insertSb.append(")");
-
-						mysqlDbo.addBatchSql(insertSb.toString());
-					} // record level while
-
-					mysqlDbo.batchUpdate();
-
-					delegate.updateDatabaseImportIndicator(indicator);
-
-					notifyImportBatchEnded(context, start);
-				} catch (RuntimeException ex) {
-					notifyImportBatchFailed(context, start, ex);
-					throw ex;
-				}
+				ps = doImportBatchly(context, delegate, mysqlDbo, accessDbo,
+						tableTO, indicator, ps);
 				countData = countData(accessDbo, tableTO, indicator);
 			} // batch level while
 
@@ -364,14 +243,109 @@ public class SyncEngine {
 		}
 	}
 
-	public void importDataFromAccessDatabase(SyncContext context,
+	private PreparedStatement doImportBatchly(final SyncContext context,
+			final ETLClientProxy delegate, final DbOperator mysqlDbo,
+			final DbOperator accessDbo, final TableDescriptorTO tableTO,
+			final DatabaseImportIndicatorTO indicator, PreparedStatement ps)
+			throws SQLException {
+		final long start = notifyImportBatchStarted(context);
+		try {
+			StringBuilder sb = new StringBuilder();
+			sb.append("SELECT TOP " + ACCESS_DB_BATCH_SIZE + " ");
+			for (ColumnDescriptorTO column : tableTO.getColumns()) {
+				sb.append(column.getAccessColumnName());
+				sb.append(",");
+			}
+			sb.deleteCharAt(sb.length() - 1);
+
+			generateFromAndWhereClauses(tableTO, indicator, sb);
+
+			ps = accessDbo.getPreparedStatement(sb.toString());
+			ResultSet rs = ps.executeQuery();
+
+			while (rs.next()) {
+				context.completedQuantity++;
+				StringBuilder insertSb = convertRawRsToInsertStatement(context,
+						tableTO, indicator, rs);
+				mysqlDbo.addBatchSql(insertSb.toString());
+			} // record level while
+
+			mysqlDbo.batchUpdate();
+
+			delegate.updateDatabaseImportIndicator(indicator);
+
+			notifyImportBatchEnded(context, start);
+		} catch (RuntimeException ex) {
+			notifyImportBatchFailed(context, start, ex);
+			throw ex;
+		}
+		return ps;
+	}
+
+	private StringBuilder convertRawRsToInsertStatement(
+			final SyncContext context, final TableDescriptorTO tableTO,
+			final DatabaseImportIndicatorTO indicator, ResultSet rs)
+			throws SQLException {
+		StringBuilder insertSb = null;
+		StringBuilder columnSb = null;
+		StringBuilder valueSb = null;
+		String indicatorValue = null;
+		insertSb = new StringBuilder();
+		columnSb = new StringBuilder();
+		valueSb = new StringBuilder();
+		insertSb.append("INSERT INTO ").append(tableTO.getName()).append(" ");
+		insertSb.append("(");
+		for (ColumnDescriptorTO column : tableTO.getColumns()) {
+			columnSb.append(column.getColumnName());
+			columnSb.append(",");
+
+			if (MysqlDBDataTypes.hasSingleQuote(column)) {
+				valueSb.append("'");
+			}
+
+			if (indicator.getIndicatorColumnName().equalsIgnoreCase(
+					column.getColumnName())) {
+				indicatorValue = rs.getString(indicator
+						.getIndicatorColumnName());
+				valueSb.append(indicatorValue);
+				indicator.setIndicatorValue(indicatorValue);
+				context.indicatorText = indicatorValue;
+			} else {
+				String value = rs.getString(column.getColumnName());
+				if (null == value || 0 >= value.length()) {
+					if (MysqlDBDataTypes.requireDefaultNumber(column)) {
+						value = "0";
+					} else {
+						value = "";
+					}
+				}
+				valueSb.append(value);
+			}
+			if (MysqlDBDataTypes.hasSingleQuote(column)) {
+				valueSb.append("'");
+			}
+			valueSb.append(",");
+
+		}
+		columnSb.deleteCharAt(columnSb.length() - 1);
+		valueSb.deleteCharAt(valueSb.length() - 1);
+
+		insertSb.append(columnSb).append(" ");
+		insertSb.append(") VALUES (");
+		insertSb.append(valueSb);
+		insertSb.append(")");
+		return insertSb;
+	}
+
+	private void importDataFromAccessDatabase(SyncContext context,
 			DatabaseDescriptorTO partialDb) {
 		final String accessUsername = partialDb.getAccessUsername();
 		final String accessPassword = partialDb.getAccessPassword();
 		final String dataSourceName = partialDb.getOdbcDatasourceName();
 		final String mysqlDatabaseName = partialDb.getName();
 		if (null == dataSourceName) {
-			throw new NullPointerException("Please configure Data Source Name at Server side.");
+			throw new NullPointerException(
+					"Please configure Data Source Name at Server side.");
 		}
 		final String accessUrl = "jdbc:odbc:" + dataSourceName;
 		final String mysqlUrl = "jdbc:mysql://" + mysqlServerIpAddress
@@ -383,7 +357,6 @@ public class SyncEngine {
 		final DbOperator accessDbo = new DbOperator(
 				"sun.jdbc.odbc.JdbcOdbcDriver", accessUrl, accessUsername,
 				accessPassword);
-
 		try {
 			ETLClientProxy delegate = ETLClientProxy.getInstance();
 
@@ -406,12 +379,10 @@ public class SyncEngine {
 					importDataForTable(context, delegate, mysqlDbo, accessDbo,
 							mysqlDatabaseName, table,
 							tableIndicatorMap.get(table.getName()));
-
 				}
 			}
 
 		} catch (Exception e) {
-			e.printStackTrace();
 			throw new SyncException(e);
 		} finally {
 			mysqlDbo.closeAll();
@@ -525,11 +496,11 @@ public class SyncEngine {
 		this.listener = listener;
 	}
 
-	public void syncRawProductionData2Server(SyncContext context,
+	private void syncRawProductionData2Server(SyncContext context,
 			final String mysqlDatabaseName) {
 		DbOperator dbo = null;
 		PreparedStatement countPs = null;
-		PreparedStatement ps = null;
+		PreparedStatement dataPs = null;
 		PreparedStatement updatePs = null;
 		int batchNumber = 1;
 		try {
@@ -564,140 +535,51 @@ public class SyncEngine {
 			}
 
 			// TODO Step 2 Assemble SQL
-			final StringBuilder sql = new StringBuilder();
-			sql.append("SELECT").append(" ");
 			final List<ETLColumnDescriptorTO> columnDescriptors = tableDescriptor
-					.getColumnDescriptors();
-			for (ETLColumnDescriptorTO etlColumn : columnDescriptors) {
-				if (null == etlColumn.getRawColumnName()
-						|| 0 >= etlColumn.getRawColumnName().length()) {
-					continue;
-				}
-				sql.append(etlColumn.getRawColumnName()).append(",");
-			}
-			sql.deleteCharAt(sql.length() - 1);
-			sql.append(" ");
+			.getColumnDescriptors();
 			final String rawTableName = tableDescriptor.getRawTableName();
-			// final DatabaseImportIndicatorTO databaseImportIndicator =
-			// ETLClientProxy.getInstance().getDatabaseImportIndicator(
-			// mysqlDatabaseName, rawTableName);
-			sql.append("FROM").append(" ").append(rawTableName).append(" ");
 
-			sql.append("WHERE").append(" ");
-
-			if (null != syncIndicator.getIndicatorValue()) {
-				sql.append(syncIndicator.getIndicatorColumnName())
-						.append(" > ").append("'")
-						.append(syncIndicator.getIndicatorValue()).append("'")
-						.append(" AND ");
-			}
-			sql.append("_synced = 0 ORDER BY "
-					+ syncIndicator.getIndicatorColumnName()
-					+ " ASC LIMIT 2000");
-
-			System.out.println(sql);
+			final StringBuilder dataSql = dataSql(syncIndicator, columnDescriptors,
+					rawTableName);
+			final String countSql = countSql(syncIndicator, rawTableName);
 
 			final String mysqlUrl = "jdbc:mysql://" + mysqlServerIpAddress
 					+ ":3306/" + mysqlDatabaseName
 					+ "?useUnicode=true&amp;CharacterEncoding=GBK";
 			// FIXME Get Sync Indicator
-			String countSql = "SELECT COUNT(*) FROM " + rawTableName
-					+ " WHERE _synced = 0 ";
-			if (null != syncIndicator.getIndicatorValue()) {
-				countSql += "AND " + syncIndicator.getIndicatorColumnName()
-						+ " > '" + syncIndicator.getIndicatorValue() + "'";
-			}
 
 			dbo = new DbOperator(mysqlUrl, mysqlUsername, mysqlPassword);
 			countPs = dbo.getPreparedStatement(countSql);
-			ps = dbo.getPreparedStatement(sql.toString());
-			ResultSet countSet = countPs.executeQuery();
-			countSet.next();
-			int unSyncedCount = countSet.getInt(1);
-			ArrayList<RawProductionRecordTO> resultList = null;
-
-			final String updateSql = "UPDATE " + rawTableName
-					+ " SET _synced = 1 WHERE "
-					+ syncIndicator.getIndicatorColumnName() + " = ?";
+			dataPs = dbo.getPreparedStatement(dataSql.toString());
+			
+			final String updateSql = updateSyncStateSql(syncIndicator,
+					rawTableName);
 			updatePs = dbo.getPreparedStatement(updateSql);
 
 			context.completedQuantity = 0;
 			context.indicatorText = null;
 			long start = -1L;
 
+			int unSyncedCount = getUnSyncedCount(countPs);
 			while (0 < unSyncedCount) {
 				context.batchNumber = batchNumber++;
+				
 				start = notifySyncBatchStarted(context);
 				try {
-					resultList = new ArrayList<RawProductionRecordTO>();
-					ResultSet rs = ps.executeQuery();
-					RawProductionRecordTO importRecord = null;
-					String targetFieldName = null;
-					Field targetField = null;
+					final ArrayList<RawProductionRecordTO> resultList = new ArrayList<RawProductionRecordTO>();
+					final ResultSet rs = dataPs.executeQuery();
 
-					String indicatorValue = null;
 					while (rs.next()) {
-
 						context.completedQuantity++;
-
-						// Step 3 Assemble ResultTO
-						importRecord = new RawProductionRecordTO();
-						for (ETLColumnDescriptorTO etlColumn : columnDescriptors) {
-
-							targetFieldName = etlColumn.getTargetFieldName();
-							// FIXME No inheritence supported here.
-							targetField = importRecord.getClass()
-									.getDeclaredField(targetFieldName);
-							String value = "";
-
-							if (null == etlColumn.getRawColumnName()) {
-								continue;
-							} else {
-								value = rs.getString(etlColumn
-										.getRawColumnName());
-							}
-
-							if (etlColumn.getRawColumnName().equalsIgnoreCase(
-									syncIndicator.getIndicatorColumnName())) {
-								updatePs.setObject(1, value);
-								updatePs.addBatch();
-								indicatorValue = value;
-								context.indicatorText = indicatorValue;
-							}
-							if (targetField.isAccessible()) {
-								targetField.set(importRecord, value);
-							} else {
-								targetField.setAccessible(true);
-								targetField.set(importRecord, value);
-								targetField.setAccessible(false);
-							}
-						}
+						final RawProductionRecordTO importRecord = convertRs2ProductionRecord(context,
+								updatePs, syncIndicator, columnDescriptors, rs);
 						resultList.add(importRecord);
 					}
 
-					// Step 5 UPDATE state
-					System.out.println("inserting " + resultList.size()
-							+ " records to server.");
+					pushProductionRecordToServer(mysqlDatabaseName,
+							syncIndicator, resultList);
 
-					// ProductionDelegate.getInstance().importProductionRecords(
-					// resultList.toArray(new RawProductionRecordTO[0]));
-
-					DatabaseDescriptorTO databaseDescriptor = ETLClientProxy
-							.getInstance().getDatabaseDescriptor(
-									mysqlDatabaseName);
-
-					assert (null != databaseDescriptor.getPlantId());
-
-					ETLClientProxy.getInstance().doSyncRawProductionRecords(
-							databaseDescriptor.getPlantId(),
-							resultList.toArray(new RawProductionRecordTO[0]));
-
-					syncIndicator.setIndicatorValue(indicatorValue);
-					ETLClientProxy.getInstance().updateDatabaseSyncIndicator(
-							syncIndicator);
-
-					System.out.println("inserted " + resultList.size()
-							+ " records to server.");
+					System.out.println("inserted " + resultList.size() + " records to server.");
 
 					updatePs.executeBatch();
 					notifySyncBatchEnded(context, start);
@@ -708,9 +590,7 @@ public class SyncEngine {
 				// context.subPhase = SyncPhaseEnum.SyncEnd;
 
 				// Reset counter;
-				countSet = countPs.executeQuery();
-				countSet.next();
-				unSyncedCount = countSet.getInt(1);
+				unSyncedCount = getUnSyncedCount(countPs);
 				System.out.println(unSyncedCount + " Left. ");
 
 			}
@@ -732,9 +612,9 @@ public class SyncEngine {
 				}
 			}
 
-			if (null != ps) {
+			if (null != dataPs) {
 				try {
-					ps.close();
+					dataPs.close();
 				} catch (SQLException e) {
 				}
 			}
@@ -743,6 +623,132 @@ public class SyncEngine {
 				dbo.closeAll();
 			}
 		}
+	}
+
+	private StringBuilder dataSql(DatabaseSyncIndicatorTO syncIndicator,
+			final List<ETLColumnDescriptorTO> columnDescriptors,
+			final String rawTableName) {
+		final StringBuilder sql = new StringBuilder();
+		sql.append("SELECT").append(" ");
+		for (ETLColumnDescriptorTO etlColumn : columnDescriptors) {
+			if (null == etlColumn.getRawColumnName()
+					|| 0 >= etlColumn.getRawColumnName().length()) {
+				continue;
+			}
+			sql.append(etlColumn.getRawColumnName()).append(",");
+		}
+		sql.deleteCharAt(sql.length() - 1);
+		sql.append(" ");
+		// final DatabaseImportIndicatorTO databaseImportIndicator =
+		// ETLClientProxy.getInstance().getDatabaseImportIndicator(
+		// mysqlDatabaseName, rawTableName);
+		sql.append("FROM").append(" ").append(rawTableName).append(" ");
+
+		sql.append("WHERE").append(" ");
+
+		if (null != syncIndicator.getIndicatorValue()) {
+			sql.append(syncIndicator.getIndicatorColumnName())
+					.append(" > ").append("'")
+					.append(syncIndicator.getIndicatorValue()).append("'")
+					.append(" AND ");
+		}
+		sql.append("_synced = 0 ORDER BY "
+				+ syncIndicator.getIndicatorColumnName()
+				+ " ASC LIMIT " + MYSQL_SYNC_BATCH_LIMIT);
+
+		System.out.println(sql);
+		return sql;
+	}
+
+	private String updateSyncStateSql(DatabaseSyncIndicatorTO syncIndicator,
+			final String rawTableName) {
+		final String updateSql = "UPDATE " + rawTableName
+				+ " SET _synced = 1 WHERE "
+				+ syncIndicator.getIndicatorColumnName() + " = ?";
+		return updateSql;
+	}
+
+	private String countSql(DatabaseSyncIndicatorTO syncIndicator,
+			final String rawTableName) {
+		String countSql = "SELECT COUNT(*) FROM " + rawTableName
+				+ " WHERE _synced = 0 ";
+		if (null != syncIndicator.getIndicatorValue()) {
+			countSql += "AND " + syncIndicator.getIndicatorColumnName()
+					+ " > '" + syncIndicator.getIndicatorValue() + "'";
+		}
+		return countSql;
+	}
+
+	private int getUnSyncedCount(PreparedStatement countPs) throws SQLException {
+		ResultSet countSet;
+		int unSyncedCount;
+		countSet = countPs.executeQuery();
+		countSet.next();
+		unSyncedCount = countSet.getInt(1);
+		return unSyncedCount;
+	}
+
+	private void pushProductionRecordToServer(final String mysqlDatabaseName,
+			DatabaseSyncIndicatorTO syncIndicator,
+			ArrayList<RawProductionRecordTO> resultList) {
+		// Step 5 UPDATE state
+		System.out.println("inserting " + resultList.size()
+				+ " records to server.");
+
+		DatabaseDescriptorTO databaseDescriptor = ETLClientProxy
+				.getInstance().getDatabaseDescriptor(
+						mysqlDatabaseName);
+
+		assert (null != databaseDescriptor.getPlantId());
+
+		ETLClientProxy.getInstance().doSyncRawProductionRecords(
+				databaseDescriptor.getPlantId(),
+				resultList.toArray(new RawProductionRecordTO[0]));
+
+		ETLClientProxy.getInstance().updateDatabaseSyncIndicator(
+				syncIndicator);
+	}
+
+	private RawProductionRecordTO convertRs2ProductionRecord(
+			SyncContext context, PreparedStatement updatePs,
+			DatabaseSyncIndicatorTO syncIndicator,
+			final List<ETLColumnDescriptorTO> columnDescriptors, ResultSet rs)
+			throws NoSuchFieldException, SQLException, IllegalAccessException {
+		RawProductionRecordTO importRecord;
+		String targetFieldName;
+		Field targetField;
+		importRecord = new RawProductionRecordTO();
+		for (ETLColumnDescriptorTO etlColumn : columnDescriptors) {
+
+			targetFieldName = etlColumn.getTargetFieldName();
+			// FIXME No inheritence supported here.
+			targetField = importRecord.getClass()
+					.getDeclaredField(targetFieldName);
+			String value = "";
+
+			if (null == etlColumn.getRawColumnName()) {
+				continue;
+			} else {
+				value = rs.getString(etlColumn
+						.getRawColumnName());
+			}
+
+			if (etlColumn.getRawColumnName().equalsIgnoreCase(
+					syncIndicator.getIndicatorColumnName())) {
+				updatePs.setObject(1, value);
+				updatePs.addBatch();
+				context.indicatorText = value;
+				syncIndicator.setIndicatorValue(value);
+			}
+			if (targetField.isAccessible()) {
+				targetField.set(importRecord, value);
+			} else {
+				targetField.setAccessible(true);
+				targetField.set(importRecord, value);
+				targetField.setAccessible(false);
+			}
+		}
+		return importRecord;
 	}
 
 }

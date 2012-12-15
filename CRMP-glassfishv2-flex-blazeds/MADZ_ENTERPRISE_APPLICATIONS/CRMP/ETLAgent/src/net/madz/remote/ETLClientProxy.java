@@ -9,8 +9,8 @@ import java.util.List;
 
 import net.madz.client.etl.delegate.ETLDelegate;
 import net.madz.client.production.delegate.ProductionDelegate;
-import net.madz.etl.demo.MysqlDBDataTypes;
-import net.madz.etl.demo.access.AccessDBDataTypes;
+import net.madz.etl.db.AccessDBDataTypes;
+import net.madz.etl.db.MysqlDBDataTypes;
 import net.madz.module.production.ConcreteMixingPlantTO;
 import net.madz.service.etl.to.ColumnDescriptorTO;
 import net.madz.service.etl.to.DatabaseDescriptorTO;
@@ -101,10 +101,10 @@ public class ETLClientProxy {
 
 		Collection<IMixingPlantDisplayable> plantsCollection = new ArrayList<IMixingPlantDisplayable>();
 
-		plantsCollection.add(new DefaultMixingPlantDisplayable("1ºÅ½Á°èÕ¾"));
-		plantsCollection.add(new DefaultMixingPlantDisplayable("2ºÅ½Á°èÕ¾"));
-		plantsCollection.add(new DefaultMixingPlantDisplayable("3ºÅ½Á°èÕ¾"));
-		plantsCollection.add(new DefaultMixingPlantDisplayable("4ºÅ½Á°èÕ¾"));
+		plantsCollection.add(new DefaultMixingPlantDisplayable("1ï¿½Å½ï¿½ï¿½ï¿½Õ¾"));
+		plantsCollection.add(new DefaultMixingPlantDisplayable("2ï¿½Å½ï¿½ï¿½ï¿½Õ¾"));
+		plantsCollection.add(new DefaultMixingPlantDisplayable("3ï¿½Å½ï¿½ï¿½ï¿½Õ¾"));
+		plantsCollection.add(new DefaultMixingPlantDisplayable("4ï¿½Å½ï¿½ï¿½ï¿½Õ¾"));
 		return plantsCollection;
 	}
 

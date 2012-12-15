@@ -6,8 +6,8 @@ public class DefaultSyncStatusDisplayable implements ISyncStatusDisplayable {
 
 	private String id;
 	private String name;
-	private String importIndicatorText = "2010-06-30 10:34:08";
-	private String syncIndicatorText = "2010-06-30 10:34:08";
+	private String importIndicatorText = "";
+	private String syncIndicatorText = "";
 	private String state = WizardMessage.PENDING_STATE;
 	private int importQuantity;
 	private int syncQuantity;

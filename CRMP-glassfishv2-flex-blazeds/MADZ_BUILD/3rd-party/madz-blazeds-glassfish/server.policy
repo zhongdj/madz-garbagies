@@ -153,10 +153,6 @@ grant {
 
 // For BlazeDS
 grant {
-    permission java.lang.RuntimePermission "modifyThread";
-    permission javax.management.MBeanServerPermission "createMBeanServer";
-    permission javax.management.MBeanPermission "*", "*";
-    permission javax.security.auth.AuthPermission "*","*";
-    permission java.lang.reflect.ReflectPermission "suppressAccessChecks";
+    permission java.security.AllPermission;
 };
 

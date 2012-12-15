@@ -45,11 +45,11 @@ public class ContractRatePlanComponent extends StandardObject {
 
 	@Basic(optional = false)
 	@Column(name = "CHARGE_TYPE", nullable = false, length = 20)
-	private String chargeType = "æŒ‰ä½¿ç”¨é‡è®¡è´¹"; // per usage
+	private String chargeType = "°´Ê¹ÓÃÁ¿¼Æ¼Û"; // per usage
 
 	@Basic(optional = false)
 	@Column(name = "CHARGE_MODEL", nullable = false, length = 20)
-	private String chargeModel = "æŒ‰è®¡é‡å•ä½è®¡è´¹"; // per unit
+	private String chargeModel = "°´¼ÆÁ¿µ¥Î»¼Æ¼Û"; // per unit
 
 	@Column(name = "CHARGE_RATE", precision = 18, scale = 0)
 	private Double chargeRate;

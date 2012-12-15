@@ -12,29 +12,29 @@ public class ResolveAndImportDataTestDrive {
 
 	public static void main(String[] args) {
 
-		String dataSourceName = "crmp_1_dsn";
-		String catalogName = "Search";
-		String mysqlDatabaseName = "crmp_1_db";
-		Mode mode = Mode.Create;
-		String accessUsername = "";
-		String accessPassword = "";
-		String webUsername = "administrator";
-		String webPassword = "Barryzdjwin5631";
-		String mysqlUsername = "root";
-		String mysqlPassword = "1q2w3e4r5t";
-		String mysqlServerIpAddress = "localhost";
+//		String dataSourceName = "crmp_1_dsn";
+//		String catalogName = "Search";
+//		String mysqlDatabaseName = "crmp_1_db";
+//		Mode mode = Mode.Create;
+//		String accessUsername = "";
+//		String accessPassword = "";
+//		String webUsername = "administrator";
+//		String webPassword = "Barryzdjwin5631";
+//		String mysqlUsername = "root";
+//		String mysqlPassword = "1q2w3e4r5t";
+//		String mysqlServerIpAddress = "localhost";
 
-		// String dataSourceName = "crmp_2_dsn";
-		// String catalogName = "CB3200Report";
-		// String mysqlDatabaseName = "crmp_CB3200Report_db";
-		// Mode mode = Mode.Create;
-		// String accessUsername = "ï¿½ï¿½ï¿½ï¿½Ô±";
-		// String accessPassword = "1";
-		// String webUsername = "administrator";
-		// String webPassword = "Barryzdjwin5631";
-		// String mysqlUsername = "root";
-		// String mysqlPassword = "1q2w3e4r5t";
-		// String mysqlServerIpAddress = "localhost";
+		 String dataSourceName = "crmp_2_dsn";
+		 String catalogName = "CB3200Report";
+		 String mysqlDatabaseName = "crmp_CB3200Report_db";
+		 Mode mode = Mode.Create;
+		 String accessUsername = "ï¿½ï¿½ï¿½ï¿½Ô±";
+		 String accessPassword = "1";
+		 String webUsername = "administrator";
+		 String webPassword = "Barryzdjwin5631";
+		 String mysqlUsername = "root";
+		 String mysqlPassword = "1q2w3e4r5t";
+		 String mysqlServerIpAddress = "localhost";
 
 		// String dataSourceName = "crmp_3_dsn";
 		// String catalogName = "data";
@@ -49,7 +49,7 @@ public class ResolveAndImportDataTestDrive {
 		// String mysqlServerIpAddress = "localhost";
 
 		ConcreteMixingPlantTO plant = new ConcreteMixingPlantTO();
-		plant.setName("3#½Á°èÕ¾");
+		plant.setName("2#");
 		String mixingPlantId = "";
 		ProgrammaticLogin pl = new ProgrammaticLogin();
 		try {

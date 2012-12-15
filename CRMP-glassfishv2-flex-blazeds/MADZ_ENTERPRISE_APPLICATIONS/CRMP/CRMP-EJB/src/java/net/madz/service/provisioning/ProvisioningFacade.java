@@ -19,6 +19,7 @@ import javax.persistence.PersistenceContext;
 
 import net.madz.infra.biz.service.core.ApplicationServiceException;
 import net.madz.interceptor.AuditInterceptor;
+import net.madz.interceptor.TenantCacheInterceptor;
 import net.madz.interceptor.ValidationInterceptor;
 import net.madz.module.account.AccountTO;
 import net.madz.module.account.ContactTO;
@@ -37,7 +38,7 @@ import net.madz.module.contract.facade.ContractFacadeLocal;
 
 @Stateless
 @RolesAllowed({ "SA" })
-@Interceptors({ AuditInterceptor.class, ValidationInterceptor.class })
+@Interceptors({ TenantCacheInterceptor.class, AuditInterceptor.class, ValidationInterceptor.class })
 public class ProvisioningFacade implements ProvisioningFacadeRemote {
 
 	private static final String UNSPECIFIED = "UNSPECIFIED";

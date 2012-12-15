@@ -23,6 +23,7 @@ import net.madz.infra.biz.core.BusinessException;
 import net.madz.infra.security.util.TenantResources;
 import net.madz.infra.util.BizObjectUtil;
 import net.madz.interceptor.AuditInterceptor;
+import net.madz.interceptor.TenantCacheInterceptor;
 import net.madz.interceptor.ValidationInterceptor;
 import net.madz.module.account.entity.Account;
 import net.madz.module.account.entity.Contact;
@@ -48,7 +49,7 @@ import net.vicp.madz.infra.binding.TransferObjectFactory;
 
 @Stateless
 @RolesAllowed({ "ADMIN" })
-@Interceptors({ AuditInterceptor.class, ValidationInterceptor.class })
+@Interceptors({ TenantCacheInterceptor.class, AuditInterceptor.class, ValidationInterceptor.class })
 public class ContractFacade implements ContractFacadeRemote, ContractFacadeLocal {
 
 	private static final String UNSPECIFIED = "UNSPECIFIED";

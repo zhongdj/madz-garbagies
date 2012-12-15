@@ -20,6 +20,7 @@ import net.madz.infra.security.persistence.User;
 import net.madz.infra.security.util.TenantResources;
 import net.madz.infra.util.BizObjectUtil;
 import net.madz.interceptor.AuditInterceptor;
+import net.madz.interceptor.TenantCacheInterceptor;
 import net.madz.interceptor.ValidationInterceptor;
 import net.madz.module.common.entity.Merchandise;
 import net.madz.module.common.entity.UnitOfMeasure;
@@ -37,7 +38,7 @@ import net.vicp.madz.infra.binding.TransferObjectFactory;
 
 @Stateless
 @RolesAllowed({ "ADMIN" })
-@Interceptors({ AuditInterceptor.class, ValidationInterceptor.class })
+@Interceptors({ TenantCacheInterceptor.class, AuditInterceptor.class, ValidationInterceptor.class })
 public class ProductionFacade implements ProductionFacadeRemote, ProductionFacadeLocal {
 
 	private static final String UNSPECIFIED = "UNSPECIFIED";

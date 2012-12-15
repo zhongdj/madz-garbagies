@@ -101,6 +101,7 @@ public class SyncStatusWizardPage extends JWizardPage implements ISyncListener {
 
 			@Override
 			public void componentResized(ComponentEvent e) {
+				System.out.println("Resized." + e);
 			}
 
 			@Override
